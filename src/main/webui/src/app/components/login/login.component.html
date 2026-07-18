@@ -2,33 +2,55 @@
   <div class="auth-card">
     <div class="auth-card__header">
       <mat-icon fontIcon="login" aria-hidden="true"></mat-icon>
-      <h1>Entrar</h1>
-      <p>Acesse com sua conta Passport</p>
+      <h1 id="login-title">Entrar</h1>
+      <p id="login-subtitle">Acesse com sua conta Passport</p>
     </div>
-    <form class="auth-card__body" (ngSubmit)="login()">
+    <form
+      class="auth-card__body"
+      aria-labelledby="login-title"
+      aria-describedby="login-subtitle"
+      (ngSubmit)="login()">
       <mat-form-field appearance="outline">
         <mat-label>E-mail</mat-label>
-        <input matInput [(ngModel)]="email" name="email" required autocomplete="email" />
+        <input
+          id="login-email"
+          matInput
+          [(ngModel)]="email"
+          name="email"
+          required
+          autocomplete="email"
+          aria-label="E-mail"
+          autofocus />
       </mat-form-field>
       <mat-form-field appearance="outline">
         <mat-label>Senha</mat-label>
         <input
+          id="login-password"
           matInput
           name="password"
           [(ngModel)]="password"
           [type]="hide() ? 'password' : 'text'"
           required
           autocomplete="current-password"
+          aria-label="Senha"
+          [attr.aria-invalid]="error ? true : null"
+          [attr.aria-describedby]="error ? 'login-error' : null"
         />
-        <button type="button" mat-icon-button matSuffix (click)="clickEvent($event)" aria-label="Mostrar senha">
-          <mat-icon>{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        <button
+          type="button"
+          mat-icon-button
+          matSuffix
+          (click)="clickEvent($event)"
+          [attr.aria-label]="hide() ? 'Mostrar senha' : 'Ocultar senha'"
+          [attr.aria-pressed]="!hide()">
+          <mat-icon aria-hidden="true">{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
       </mat-form-field>
       @if (error) {
-        <div class="error" role="alert">{{ error }}</div>
+        <div id="login-error" class="error" role="alert" aria-live="assertive">{{ error }}</div>
       }
       <div class="form-actions">
-        <button matButton="filled" type="submit">
+        <button class="btn-primary" matButton="filled" type="submit">
           <mat-icon fontIcon="login" aria-hidden="true"></mat-icon>
           <span>Entrar</span>
         </button>

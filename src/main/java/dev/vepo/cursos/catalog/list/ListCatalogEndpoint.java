@@ -11,9 +11,11 @@ import jakarta.annotation.security.DenyAll;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 
 @Path("/catalog/courses")
@@ -34,7 +36,8 @@ public class ListCatalogEndpoint {
     @GET
     @Authenticated
     @Operation(operationId = "listCatalog")
-    public CatalogResponse list(@QueryParam("category") String category) {
-        return catalogService.loadCatalog(currentPassportUser.require(), category);
+    public CatalogResponse list(@HeaderParam(HttpHeaders.AUTHORIZATION) String authorization,
+                                @QueryParam("category") String category) {
+        return catalogService.loadCatalog(currentPassportUser.require(), category, authorization);
     }
 }

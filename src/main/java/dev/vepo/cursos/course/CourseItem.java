@@ -39,6 +39,12 @@ public class CourseItem {
     @Column(name = "markdown_body")
     private String markdownBody;
 
+    @Column(name = "link_url", length = 2000)
+    private String linkUrl;
+
+    @Column(name = "link_description", length = 2000)
+    private String linkDescription;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "resource_id")
     private CourseResource resource;
@@ -88,6 +94,14 @@ public class CourseItem {
         return markdownBody;
     }
 
+    public String getLinkUrl() {
+        return linkUrl;
+    }
+
+    public String getLinkDescription() {
+        return linkDescription;
+    }
+
     public CourseResource getResource() {
         return resource;
     }
@@ -111,6 +125,12 @@ public class CourseItem {
 
     public void updateMarkdown(String markdownBody) {
         this.markdownBody = markdownBody;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateLink(String linkUrl, String linkDescription) {
+        this.linkUrl = linkUrl;
+        this.linkDescription = linkDescription != null ? linkDescription : "";
         this.updatedAt = Instant.now();
     }
 

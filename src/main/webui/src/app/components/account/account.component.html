@@ -1,0 +1,76 @@
+<main class="app-shell-main nested-page" data-testid="shell-main">
+  <header class="page-header">
+    <h1 class="page-title" data-testid="page-title">Minha conta</h1>
+  </header>
+
+  <section class="card account-card" aria-labelledby="profile-heading">
+    <h2 id="profile-heading">Perfil</h2>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Usuário</mat-label>
+      <input matInput [value]="username" readonly />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Nome</mat-label>
+      <input matInput name="name" [(ngModel)]="name" autocomplete="name" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Email</mat-label>
+      <input matInput name="email" type="email" [(ngModel)]="email" autocomplete="email" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Descrição do autor</mat-label>
+      <textarea
+        matInput
+        name="description"
+        rows="4"
+        data-testid="author-description"
+        [(ngModel)]="description"></textarea>
+    </mat-form-field>
+    <button
+      mat-flat-button
+      class="btn-primary"
+      type="button"
+      data-testid="save-profile"
+      [disabled]="savingProfile"
+      (click)="saveProfile()">
+      Salvar
+    </button>
+    @if (profileMessage) {
+      <p class="ok" role="status">{{ profileMessage }}</p>
+    }
+    @if (profileError) {
+      <p class="error" role="alert">{{ profileError }}</p>
+    }
+  </section>
+
+  <section class="card account-card" aria-labelledby="password-heading">
+    <h2 id="password-heading">Alterar senha</h2>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Senha atual</mat-label>
+      <input matInput type="password" name="currentPassword" [(ngModel)]="currentPassword" autocomplete="current-password" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Nova senha</mat-label>
+      <input matInput type="password" name="newPassword" [(ngModel)]="newPassword" autocomplete="new-password" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Confirmar nova senha</mat-label>
+      <input matInput type="password" name="confirmPassword" [(ngModel)]="confirmPassword" autocomplete="new-password" />
+    </mat-form-field>
+    <button
+      mat-flat-button
+      class="btn-primary"
+      type="button"
+      data-testid="change-password"
+      [disabled]="changingPassword"
+      (click)="changePassword()">
+      Alterar senha
+    </button>
+    @if (passwordMessage) {
+      <p class="ok" role="status">{{ passwordMessage }}</p>
+    }
+    @if (passwordError) {
+      <p class="error" role="alert">{{ passwordError }}</p>
+    }
+  </section>
+</main>

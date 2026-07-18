@@ -1,9 +1,11 @@
-<mat-toolbar color="primary">
-  <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
-  <span>Progresso</span>
-</mat-toolbar>
+<main class="app-shell-main nested-page" data-testid="shell-main">
+  <header class="page-header">
+    <h1 class="page-title" data-testid="page-title">Progresso</h1>
+    <div class="page-actions" data-testid="page-actions">
+      <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
+    </div>
+  </header>
 
-<main>
   @if (!summaries.length) {
     <p>Nenhum aluno matriculado ainda.</p>
   }

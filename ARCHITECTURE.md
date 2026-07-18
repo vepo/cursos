@@ -10,6 +10,7 @@ Canonical reference for developers and AI agents. Domain language lives in [docs
 - **PostgreSQL + Flyway** — schema in `src/main/resources/db/migration/`.
 - **Passport JWT auth** — SmallRye JWT (RS256) validates tokens issued by Passport; Cursos does not own user passwords.
 - **Role by relationship** — a **teacher** is the user who created a course; a **student** is a user with an enrollment on that course.
+- **Platform administration** — Passport JWT group `cursos.admin` gates category writes and the **Admin** menu.
 - **Git course sync** — `git` package links a remote and syncs `course.yml` into course items ([feature/git-course-sync.md](feature/git-course-sync.md)).
 
 ## 2. Request lifecycle
@@ -48,12 +49,13 @@ dev.vepo.cursos/
 ├── course/         # Courses, categories, items
 ├── enrollment/     # Request, approve, direct enroll
 ├── progress/       # Item completion + percentage
+├── discussion/     # Aula comments, upvotes, moderation
 ├── mailer/         # Enrollment emails
 ├── git/            # POST-MVP — course.yml sync
 └── infra/          # Cross-cutting HTTP, dev setup
 ```
 
-Frontend: `src/main/webui/src/app/` — `components/`, `services/`, `generated/`, `guards/`, `interceptors/`.
+Frontend: `src/main/webui/src/app/` — `components/`, `services/`, `generated/`, `guards/`, `interceptors/`. Global dark-shell tokens and shared `.app-shell-page`, `.app-shell-sidebar`, and `.app-shell-main` layout classes live in `src/main/webui/src/styles.scss`; root header/drawer behavior lives in `app.*`.
 
 Bounded contexts: [docs/domain-specification.md](docs/domain-specification.md) §Bounded contexts.
 
@@ -73,9 +75,11 @@ One per entity; `@ApplicationScoped`; `EntityManager`; `@Transactional` on mutat
 | `CatalogService` | Teaching / enrolled / available-requested sections |
 | `EnrollmentService` | Request, approve, reject, direct enroll |
 | `ProgressService` | Completion, teacher adjust, percentage |
+| `StudyService` | Sequential aula accessibility, tree state, teacher preview |
+| `CommentService` | Aula comments, upvote toggle, hide/restore |
 | `IdentityService` | Upsert local identity from JWT |
 | `MailerService` | Enrollment emails |
-| `GitCourseSyncService` | Link/unlink repo; clone + import `course.yml` |
+| `GitCourseSyncService` | Link/unlink repo; **JGit** clone + import `course.yml` |
 
 ### Endpoint layer
 
@@ -92,6 +96,7 @@ One per entity; `@ApplicationScoped`; `EntityManager`; `@Transactional` on mutat
 | User identity | JWT `sub` → `tb_identities.passport_user_id` |
 | Teacher check | `Course.teacherId == current identity` |
 | Student check | `Enrollment` with status ENROLLED |
+| Cursos admin | Passport JWT `groups` contains `cursos.admin`; `@RolesAllowed("cursos.admin")` on category writes |
 
 Cursos does not implement login — Angular obtains JWT from Passport and uses `auth.interceptor.ts`.
 
@@ -111,9 +116,9 @@ Base path: `/api`. OpenAPI at `/openapi`.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/categories` | List categories |
-| POST | `/categories` | Create category |
-| POST | `/categories/{id}` | Update category |
+| GET | `/categories` | List categories (authenticated) |
+| POST | `/categories` | Create category (`cursos.admin`) |
+| POST | `/categories/{id}` | Update category (`cursos.admin`) |
 
 ### Courses
 
@@ -124,17 +129,27 @@ Base path: `/api`. OpenAPI at `/openapi`.
 | GET | `/courses/{id}` | Course detail |
 | POST | `/courses/{id}` | Update course |
 | POST | `/courses/{id}/publish` | Publish course |
+| POST | `/courses/{id}/unpublish` | Unpublish course (back to draft) |
 
 ### Course items
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/courses/{id}/items` | List ordered items |
-| POST | `/courses/{id}/items` | Create item |
-| POST | `/courses/{id}/items/{itemId}` | Update item |
+| POST | `/courses/{id}/items/markdown` | Create markdown aula |
+| PUT | `/courses/{id}/items/{itemId}` | Update markdown aula |
+| POST | `/courses/{id}/items/link` | Create link aula (`https` only) |
+| PUT | `/courses/{id}/items/{itemId}/link` | Update link aula |
+| POST | `/courses/{id}/items/media` | Upload IMAGE/VIDEO (multipart; video up to 250 MiB) |
 | DELETE | `/courses/{id}/items/{itemId}` | Delete item |
 | POST | `/courses/{id}/items/reorder` | Reorder |
-| GET | `/courses/{id}/items/{itemId}/media` | Download media |
+| GET | `/courses/{id}/resources/{resourceId}` | Download course-bound media (JWT) |
+| POST | `/courses/{id}/items/{itemId}/playback-ticket` | Issue short-lived signed video URL |
+| GET | `/media/playback/{courseId}/{itemId}/{resourceId}` | Public Range stream (`206`) with HMAC ticket |
+| GET | `/courses/{id}/study` | Aula tree with completion/accessibility |
+
+Student item reads, progress updates, and discussions return 403 for a locked aula. The course teacher bypasses the lock.
+
+Config: `cursos.media.max-video-bytes`, `cursos.media.signing-secret` (`CURSOS_MEDIA_SIGNING_SECRET`), `cursos.media.playback-ticket-ttl-seconds`, `cursos.media.range-chunk-bytes`.
 
 ### Enrollment
 
@@ -154,11 +169,25 @@ Base path: `/api`. OpenAPI at `/openapi`.
 | POST | `/enrollments/{id}/progress/{itemId}/adjust` | Teacher adjust |
 | GET | `/enrollments/{id}/progress` | Summary + percentage |
 
+### Aula discussion
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/courses/{id}/items/{itemId}/comments` | List visible comments |
+| POST | `/courses/{id}/items/{itemId}/comments` | Create comment |
+| POST | `/comments/{id}/upvote` | Toggle caller's upvote |
+| POST | `/comments/{id}/hide` | Teacher hide |
+| POST | `/comments/{id}/restore` | Teacher restore |
+
+Only enrolled students and the course teacher may participate. Student responses omit hidden comments.
+
 ### Auth & identity
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/auth/me` | Current user from JWT |
+| GET | `/auth/me` | Current user (proxies Passport when available; includes author description) |
+| PUT | `/account` | Update own name/email/description (proxies Passport `PUT /auth/me`) |
+| POST | `/account/change-password` | Change password (proxies Passport) |
 | POST | `/identity/sync` | Upsert local identity |
 
 ### Git (post-MVP — designed only)
@@ -177,9 +206,12 @@ Baseline: `V1.0.0__Database_Creation.sql`.
 | `tb_identities` | Passport user id, name, email |
 | `tb_categories` | Category name, sort order |
 | `tb_courses` | Title, description, category, teacher, published |
-| `tb_course_items` | position, type, markdown_text, media bytea |
+| `tb_course_resources` | media `BYTEA`, content type, filename, size |
+| `tb_course_items` | position, type (`MARKDOWN`/`IMAGE`/`VIDEO`/`LINK`), markdown, `link_url`/`link_description`, resource FK |
 | `tb_enrollments` | course, student, status (REQUESTED/ENROLLED/REJECTED) |
 | `tb_item_progress` | enrollment, item, completed, adjusted_by_teacher |
+| `tb_comments` | aula author/content plus hide/moderation audit |
+| `tb_comment_upvotes` | unique comment/voter upvote |
 | `tb_git_course_links` | **Post-MVP** — repo URL, branch, course.yml path |
 
 Progress: `round(100 * completedItems / totalItems)`.
@@ -188,13 +220,27 @@ Progress: `round(100 * completedItems / totalItems)`.
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Catalog home (three sections) |
-| `/courses/new` | Create course |
-| `/courses/:courseId` | Study or preview |
-| `/courses/:courseId/edit` | Teacher editor |
-| `/courses/:courseId/enrollments` | Enrollment admin |
-| `/categories` | Category admin |
+| `/` | Catalog home (**Ensinando**, **Matriculado**, **Disponível / Solicitado**) |
+| `/account` | Minha conta (profile, author description, change password) |
+| `/courses/:courseId` | Study shell |
+| `/courses/:courseId/lessons/:itemId` | Selected aula |
+| `/teacher` | Teacher's courses |
+| `/teacher/courses/new` | Create course |
+| `/teacher/courses/:courseId/edit` | Two-pane teacher editor (unsaved-changes guard) |
+| `/teacher/courses/:courseId/students` | Enrollment administration |
+| `/teacher/courses/:courseId/progress` | Teacher progress view |
+| `/admin/categories` | Category administration (`cursos.admin`) |
 | `/login` | Passport redirect |
+
+### Frontend visual shell
+
+- The dark-only GitHub-dark palette is defined as CSS custom properties in `styles.scss`: near-black header/sidebar, `#0d1117` main, `#161b22` surfaces, `#30363d` borders, `#58a6ff` links, `#238636` primary actions, danger red.
+- `AppComponent` owns the single persistent header and authenticated navigation drawer. The drawer is right-anchored, closed by default at every breakpoint, role-filters **Admin**, and closes on toggle, leaf navigation, or Escape. On mobile it uses the full viewport width.
+- Catalog, study, teacher home, and course editor use the shared two-column shell classes. Sidebars hold category filters, the aula tree, teaching courses, or editor items respectively.
+- Course edit, students, progress, and category administration render page titles/actions inside main and do not add nested `mat-toolbar` chrome.
+- The menu has at most two levels: **Aprender**, **Ensinar**, **Conta**, **Admin**. Header display name links to **Minha conta**. Unauthenticated users see **Entrar** instead of the authenticated drawer controls.
+
+Visual design and behavior: [feature/ui-visual-shell.md](feature/ui-visual-shell.md). Click paths: [docs/feature-catalog.md](docs/feature-catalog.md). Old teacher/category UI routes are removed without redirects because Cursos is pre-production.
 
 Details: [docs/feature-catalog.md](docs/feature-catalog.md).
 
@@ -240,6 +286,6 @@ See [development-process.mdc](.cursor/rules/development-process.mdc).
 
 ## 15. Git package — implement last
 
-Syncs `course.yml` from a Git repo into course items. Design: [feature/git-course-sync.md](feature/git-course-sync.md).
+Syncs `course.yml` from a Git repo into course items via **JGit** (embedded). Design: [feature/git-course-sync.md](feature/git-course-sync.md).
 
 **Do not implement until [feature/cursos-platform.md](feature/cursos-platform.md) is `done`.**

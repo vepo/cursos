@@ -30,7 +30,7 @@ Related: [cursos-platform.md](cursos-platform.md) FQ4 — design now, code last.
 | **Source** | ASCII below |
 | **Last updated** | 2026-07-18 |
 
-### Screen: `/courses/:courseId/edit` — Git sync section
+### Screen: `/teacher/courses/:courseId/edit` — Git sync section
 
 | Region | Elements |
 |--------|----------|
@@ -78,9 +78,9 @@ course:
 | Area | Effect |
 |------|--------|
 | Bounded contexts | `git`, `course` (item upsert) |
-| Packages | `git.link`, `git.sync`, `GitCourseSyncService`, JGit or native git client |
+| Packages | `git.link`, `git.sync`, `GitCourseSyncService`, **JGit** (embedded) |
 | API | `PUT /courses/{id}/git`, `POST /courses/{id}/git/sync` |
-| UI | Git section on course edit |
+| UI | Git section on teacher course edit at `/teacher/courses/:courseId/edit` |
 | Schema | `tb_git_course_links`; optional `external_key` on `tb_course_items` |
 | Tests | YAML parse, key matching, inactive items, teacher guard |
 | Docs | domain-spec (Git terms), ARCHITECTURE §15, feature-catalog |
@@ -101,7 +101,7 @@ course:
 
 | # | Question | Status | Answer |
 |---|----------|--------|--------|
-| AQ1 | Git client library? | open | Prefer JGit embedded; evaluate native git if needed |
+| AQ1 | Git client library? | answered | **JGit** (embedded); do not shell out to native `git` |
 | AQ2 | Item identity across sync? | answered | Stable `key` column on `CourseItem` mapped from YAML |
 
 ## Architecture
@@ -109,14 +109,24 @@ course:
 | Area | Design |
 |------|--------|
 | Packages | `dev.vepo.cursos.git.link`, `dev.vepo.cursos.git.sync` |
-| Service | `GitCourseSyncService` — clone/fetch shallow, parse YAML, delegate to `CourseItemService` |
+| Service | `GitCourseSyncService` — clone/fetch shallow via **JGit**, parse YAML, delegate to `CourseItemService` |
 | Link entity | `GitCourseLink` 1:1 with `Course` |
 | Item mapping | `CourseItem.externalKey` ← YAML `key`; upsert by `(course_id, external_key)` |
 | Progress | Unchanged rows keep progress; new keys start incomplete |
 | Auth | Teacher of course only |
-| Dependency | Depends on MVP `course` package — **blocked until MVP done** |
+| Dependency | Depends on MVP `course` package — **blocked until MVP done**; Maven dependency on `org.eclipse.jgit` |
 
 ## Changelog
+
+### 2026-07-18 — AQ1 answered (JGit)
+
+**Status:** remains design-blocked on MVP; **AQ1** recorded.
+
+**Delta:** Git client is **JGit** embedded (no native `git` CLI).
+
+**Impact on other features:** ARCHITECTURE §15 and any existing ProcessBuilder/`git` CLI sync code must align with JGit before T10 is claimed done.
+
+**Route impact:** [student-study-experience.md](student-study-experience.md) moves the Git section's host editor to `/teacher/courses/:courseId/edit`; no old-route redirect.
 
 ### Git course sync v1 — 2026-07-18
 

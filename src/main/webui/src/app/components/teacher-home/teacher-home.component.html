@@ -1,0 +1,84 @@
+<div class="app-shell-page" data-testid="teacher-shell">
+  <aside
+    id="teaching-courses-sidebar"
+    class="app-shell-sidebar"
+    data-testid="shell-sidebar"
+    [class.is-open]="sidebarOpen">
+    <div class="sidebar-heading">
+      <h1>Meus cursos</h1>
+      <a mat-flat-button class="btn-primary" routerLink="/teacher/courses/new">Novo curso</a>
+    </div>
+
+    @if (teachingCourses) {
+      @if (!teachingCourses.length) {
+        <p class="empty">Você ainda não criou cursos.</p>
+      }
+      <nav aria-label="Meus cursos">
+        @for (course of teachingCourses; track course.id) {
+          <button
+            type="button"
+            class="course-option"
+            data-testid="teaching-course-option"
+            [class.is-selected]="selectedCourse?.id === course.id"
+            [attr.aria-pressed]="selectedCourse?.id === course.id"
+            (click)="selectCourse(course)">
+            <span>{{ course.title }}</span>
+            <span
+              class="status-badge"
+              [class.status-badge--published]="isPublished(course)"
+              [class.status-badge--draft]="!isPublished(course)">
+              {{ statusLabel(course) }}
+            </span>
+          </button>
+        }
+      </nav>
+    }
+  </aside>
+
+  <main class="app-shell-main" data-testid="shell-main">
+    <button
+      class="sidebar-toggle"
+      data-testid="teaching-courses-toggle"
+      type="button"
+      aria-controls="teaching-courses-sidebar"
+      [attr.aria-expanded]="sidebarOpen"
+      (click)="toggleSidebar()">
+      Meus cursos
+    </button>
+    @if (selectedCourse; as course) {
+      <header class="page-header">
+        <div class="title-row">
+          <h1 class="page-title">{{ course.title }}</h1>
+          <span
+            class="status-badge"
+            data-testid="selected-course-status"
+            [class.status-badge--published]="isPublished(course)"
+            [class.status-badge--draft]="!isPublished(course)">
+            {{ statusLabel(course) }}
+          </span>
+        </div>
+        <div class="page-actions">
+          @if (isPublished(course)) {
+            <button mat-stroked-button type="button" data-testid="unpublish-course" (click)="unpublish(course)">
+              Despublicar
+            </button>
+          } @else {
+            <button mat-flat-button class="btn-primary" type="button" data-testid="publish-course" (click)="publish(course)">
+              Publicar curso
+            </button>
+          }
+          <a mat-button [routerLink]="['/teacher/courses', course.id, 'edit']">Editar</a>
+          <a mat-button [routerLink]="['/teacher/courses', course.id, 'students']">Alunos</a>
+          <a mat-button [routerLink]="['/teacher/courses', course.id, 'progress']">Progresso</a>
+        </div>
+      </header>
+      <p>{{ course.summary }}</p>
+      @if (message) {
+        <p class="message" role="status">{{ message }}</p>
+      }
+    } @else {
+      <h1 class="page-title">Selecione um curso</h1>
+      <p>Escolha um curso na lista para ver detalhes e ações.</p>
+    }
+  </main>
+</div>

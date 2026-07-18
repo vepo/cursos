@@ -179,3 +179,59 @@ Deliver the **Cursos** MVP: a Quarkus + Angular Quinoa modular monolith authenti
 Note: **T10** (Git course sync) is tracked in [git-course-sync.md](git-course-sync.md) and must not start until this feature is `done`.
 
 **Implementation notes:** (pending — documentation-only session 2026-07-18)
+
+### 2026-07-18 — Ensinando on home + live author summary
+
+**Version:** 2  
+**Status:** done
+
+**Description:** Show **Ensinando** on the student-first catalog home. Add live Passport **author description** to course summary (two panels: course + author).
+
+**Impact on other features:** course-authoring-ux (study view summary); Passport user description.
+
+#### Wireframe — home Ensinando
+
+```
+Catálogo
+├─ Ensinando (own courses: draft/published badges; Visualizar / Editar / Publicar|Despublicar)
+├─ Matriculado
+└─ Disponível / Solicitado
+```
+
+#### Wireframe — course summary panels
+
+```
+┌─────────────────────┬─────────────────────┐
+│ Sobre o curso       │ Sobre o autor       │
+│ summary text        │ avatar + name + bio │
+└─────────────────────┴─────────────────────┘
+```
+
+#### Feature checklist
+
+| ID | Criterion | Done |
+|----|-----------|------|
+| FC10 | Home shows Ensinando for taught courses | ☑ |
+| FC11 | Live author description from Passport on course summary | ☑ |
+| FC12 | Domain/feature-catalog/ARCHITECTURE updated | ☑ |
+
+#### Tasks
+
+| ID | Task | Done |
+|----|------|------|
+| T40 | Render Ensinando section + actions on home | ☑ |
+| T41 | Passport user description + batch public authors API | ☑ |
+| T42 | Cursos hydrate author + two-panel summary + Minha conta field | ☑ |
+
+#### Test coverage
+
+| ID | Test | Covers | Done |
+|----|------|--------|------|
+| TC10 | Home Ensinando section + no Available duplicate | T40 | ☑ |
+| TC11 | Passport description update + batch authors | T41 | ☑ |
+| TC12 | Course summary panels show live bio | T42 | ☑ |
+
+**Development approval:** approved 2026-07-18 — tasks: T40, T41, T42 (plan implementation)
+
+**Implementation notes:** Passport `User.description` + `POST /directory/authors`; Cursos `AuthorProfileService` hydrates catalog/course detail; home **Ensinando**; Minha conta description field.
+

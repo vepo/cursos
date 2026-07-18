@@ -1,28 +1,180 @@
-.spacer { flex: 1; }
-.user { margin-right: 1rem; }
-.catalog {
-  max-width: 1100px;
-  margin: 0 auto;
+.app-shell-sidebar {
+  padding: 1.5rem 1rem;
+}
+
+.sidebar-title {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.category-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.category-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+}
+
+.category-option:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.category-option.is-active {
+  border-left-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(35, 134, 54, 0.12);
+}
+
+.category-option:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.app-shell-main {
   padding: 1.5rem;
 }
-header {
+
+.catalog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+  margin-bottom: 1.75rem;
 }
+
+.filter-toggle {
+  display: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.filter-toggle:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.catalog-section {
+  margin-bottom: 2.25rem;
+}
+
+.section-heading {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
 }
-article {
-  border: 1px solid #d7dde5;
-  border-radius: 8px;
-  padding: 1rem;
-  background: #fff;
+
+.course-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 100%;
 }
-.chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0; }
-.meta { display: block; color: #5b6573; margin-bottom: 0.75rem; }
-.empty { color: #5b6573; }
-section { margin-bottom: 2rem; }
+
+.course-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.course-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.course-card__title a {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.course-card__title a:hover {
+  color: var(--color-link);
+  text-decoration: underline;
+}
+
+.course-card__summary {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  flex: 1;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.meta {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.empty {
+  color: var(--color-text-muted);
+  margin: 0 0 1rem;
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 0.25rem;
+}
+
+.card-actions .btn-quiet {
+  text-decoration: none;
+}
+
+@media (max-width: 720px) {
+  .app-shell-page {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell-sidebar {
+    display: none;
+  }
+
+  .app-shell-sidebar.is-open {
+    display: block;
+  }
+
+  .filter-toggle {
+    display: inline-flex;
+  }
+}

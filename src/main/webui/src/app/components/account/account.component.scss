@@ -1,0 +1,28 @@
+.account-card {
+  margin-bottom: 1.25rem;
+
+  h2 {
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+}
+
+.full {
+  width: 100%;
+  display: block;
+}
+
+.ok {
+  color: #3fb950;
+  font-size: 0.875rem;
+  margin: 0.75rem 0 0;
+}
+
+.error {
+  margin: 0.75rem 0 0;
+}
+
+.account-card .btn-primary {
+  margin-top: 0.25rem;
+}

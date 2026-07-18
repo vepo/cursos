@@ -4,7 +4,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { DirectoryApi } from '../../generated/api/directory.service';
 import { EnrollmentsApi } from '../../generated/api/enrollments.service';
 import { EnrollmentResponse } from '../../generated/model/enrollmentResponse';
@@ -14,7 +13,7 @@ import { PassportDirectoryUserResponse } from '../../generated/model/passportDir
   selector: 'app-course-students',
   templateUrl: './course-students.component.html',
   styleUrl: './course-students.component.scss',
-  imports: [FormsModule, RouterLink, MatToolbarModule, MatButtonModule, MatFormFieldModule, MatInputModule]
+  imports: [FormsModule, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule]
 })
 export class CourseStudentsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

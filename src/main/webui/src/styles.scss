@@ -1,13 +1,31 @@
 @use '@angular/material' as mat;
 
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+:root {
+  --color-header: #010409;
+  --color-sidebar: #010409;
+  --color-main-bg: #0d1117;
+  --color-surface: #161b22;
+  --color-accent: #238636;
+  --color-accent-hover: #2ea043;
+  --color-link: #58a6ff;
+  --color-border: #30363d;
+  --color-text: #e6edf3;
+  --color-text-muted: #8b949e;
+  --color-danger: #f85149;
+  --color-error: #f85149;
+  --radius-card: 6px;
+  --shell-header-height: 56px;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
 
 html {
-  color-scheme: light;
+  color-scheme: dark;
 
   @include mat.theme((
     color: (
-      primary: mat.$azure-palette,
+      primary: mat.$green-palette,
       tertiary: mat.$blue-palette,
     ),
     typography: Roboto,
@@ -18,8 +36,160 @@ html {
 html, body {
   height: 100%;
   margin: 0;
-  font-family: Roboto, sans-serif;
-  background: #f5f7fb;
+  font-family: Roboto, system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-main-bg);
+  color: var(--color-text);
+}
+
+a {
+  color: var(--color-link);
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-link);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.app-shell-page {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: calc(100vh - var(--shell-header-height));
+}
+
+.app-shell-sidebar {
+  background: var(--color-sidebar);
+  color: var(--color-text);
+  border-right: 1px solid var(--color-border);
+}
+
+.app-shell-main {
+  background: var(--color-main-bg);
+  color: var(--color-text);
+}
+
+.nested-page {
+  max-width: 800px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.nested-page--wide {
+  max-width: 900px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 1rem 1.25rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: transparent;
+}
+
+.status-badge--published {
+  color: #3fb950;
+  border-color: rgba(63, 185, 80, 0.4);
+}
+
+.status-badge--draft {
+  color: var(--color-text-muted);
+}
+
+.btn-primary,
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(240, 246, 252, 0.1);
+  border-radius: var(--radius-card);
+  background: var(--color-accent) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-primary:hover,
+.btn-accent:hover {
+  background: var(--color-accent-hover) !important;
+}
+
+.btn-primary:focus,
+.btn-primary:focus-visible,
+.btn-accent:focus,
+.btn-accent:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-link);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.btn-quiet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.btn-quiet:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--color-danger);
+  cursor: pointer;
 }
 
 .page-auth {
@@ -28,14 +198,16 @@ html, body {
   align-items: center;
   justify-content: center;
   padding: 1rem;
+  background: var(--color-main-bg);
 }
 
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
   padding: 2rem;
 }
 
@@ -46,11 +218,12 @@ html, body {
   h1 {
     margin: 0.5rem 0 0;
     font-size: 1.5rem;
+    font-family: var(--font-mono);
   }
 
   p {
     margin: 0.25rem 0 0;
-    color: #64748b;
+    color: var(--color-text-muted);
   }
 }
 
@@ -68,14 +241,17 @@ html, body {
 }
 
 .error {
-  color: #b91c1c;
+  color: var(--color-danger);
   font-size: 0.875rem;
 }
 
 .main-header {
-  background: #fff;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--color-header);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
   padding: 0.75rem 1.5rem;
+  min-height: var(--shell-header-height);
+  box-sizing: border-box;
 }
 
 .shell-inner {
@@ -91,8 +267,9 @@ html, body {
   align-items: center;
   gap: 0.5rem;
   text-decoration: none;
-  color: #0f172a;
+  color: var(--color-link);
   font-weight: 600;
+  font-family: var(--font-mono);
 }
 
 .grow-space {
@@ -100,14 +277,67 @@ html, body {
 }
 
 .page-content {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 0;
 }
 
-.home-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 2rem;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+.avatar-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Angular Material — dark shell alignment */
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-container-shape: var(--radius-card);
+  --mdc-outlined-text-field-outline-color: var(--color-border);
+  --mdc-outlined-text-field-hover-outline-color: var(--color-text-muted);
+  --mdc-outlined-text-field-focus-outline-color: var(--color-link);
+  --mdc-outlined-text-field-label-text-color: var(--color-text-muted);
+  --mdc-outlined-text-field-input-text-color: var(--color-text);
+  --mdc-outlined-text-field-caret-color: var(--color-link);
+  width: 100%;
+}
+
+.mat-mdc-chip {
+  --mdc-chip-label-text-color: var(--color-text);
+  --mdc-chip-outline-color: var(--color-border);
+  --mdc-chip-elevated-container-color: transparent;
+  border: 1px solid var(--color-border) !important;
+  background: transparent !important;
+  color: var(--color-text-muted) !important;
+  font-size: 0.75rem !important;
+  min-height: 1.5rem !important;
+}
+
+.mat-mdc-outlined-button,
+.mat-mdc-button {
+  --mdc-text-button-label-text-color: var(--color-text);
+  --mdc-outlined-button-label-text-color: var(--color-text);
+  --mdc-outlined-button-outline-color: var(--color-border);
+}
+
+.mat-mdc-select-panel {
+  background: var(--color-surface);
+}
+
+.mat-mdc-option {
+  --mat-option-label-text-color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu-drawer,
+  .app-shell-sidebar {
+    transition-duration: 0s !important;
+  }
 }

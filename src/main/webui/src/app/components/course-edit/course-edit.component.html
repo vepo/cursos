@@ -1,75 +1,202 @@
-<mat-toolbar color="primary">
-  <a mat-button routerLink="/">Catálogo</a>
-  <span>{{ isNew ? 'Novo curso' : 'Editar curso' }}</span>
-</mat-toolbar>
-
-<main>
-  @if (message) {
-    <p class="message">{{ message }}</p>
-  }
-
-  <section>
-    <h2>Detalhes</h2>
-    <mat-form-field appearance="outline" class="full">
-      <mat-label>Título</mat-label>
-      <input matInput [(ngModel)]="title" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full">
-      <mat-label>Resumo</mat-label>
-      <textarea matInput rows="3" [(ngModel)]="summary"></textarea>
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="full">
-      <mat-label>Categorias</mat-label>
-      <mat-select [(ngModel)]="categoryIds" multiple>
-        @for (category of categories; track category.id) {
-          <mat-option [value]="category.id">{{ category.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <button mat-flat-button color="primary" type="button" (click)="save()">Salvar</button>
-    @if (!isNew) {
-      <button mat-stroked-button type="button" (click)="publish()">Publicar</button>
-      <a mat-button [routerLink]="['/courses', courseId]">Ver</a>
-    }
-  </section>
-
+<div class="app-shell-page course-edit-shell" data-testid="course-edit-shell">
   @if (!isNew) {
-    <section>
-      <h2>Item Markdown</h2>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Título do item</mat-label>
-        <input matInput [(ngModel)]="markdownTitle" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Conteúdo</mat-label>
-        <textarea matInput rows="8" [(ngModel)]="markdownBody"></textarea>
-      </mat-form-field>
-      <button mat-stroked-button type="button" (click)="addMarkdown()">Adicionar item</button>
-      <ul>
-        @for (item of detail?.items; track item.id) {
-          <li>{{ item.sortOrder }} — {{ item.title }} ({{ item.itemType }})</li>
+    <aside class="app-shell-sidebar" data-testid="shell-sidebar">
+      <div class="sidebar-heading">
+        <strong>Conteúdo</strong>
+        <button type="button" class="btn-quiet" data-testid="new-item" (click)="selectNewItem()">+ Novo item</button>
+      </div>
+      <nav aria-label="Itens do curso">
+        <button
+          type="button"
+          class="editor-nav-item"
+          data-testid="nav-details"
+          [class.is-selected]="isSelected('details')"
+          (click)="selectDetails()">
+          Detalhes do curso
+          @if (isSelected('details') && dirty) {
+            <span class="dirty-dot" aria-label="não salvo"></span>
+          }
+        </button>
+        @for (item of items; track item.id) {
+          <div class="editor-nav-row">
+            <button
+              type="button"
+              class="editor-nav-item"
+              [attr.data-testid]="'nav-item-' + item.id"
+              [class.is-selected]="isSelected(item.id!)"
+              (click)="selectItem(item)">
+              {{ item.title }}
+              @if (isSelected(item.id!) && dirty) {
+                <span class="dirty-dot" aria-label="não salvo"></span>
+              }
+            </button>
+            <div class="editor-nav-tools">
+              <button type="button" class="btn-quiet" aria-label="Mover para cima" (click)="moveItem(item, -1)">↑</button>
+              <button type="button" class="btn-quiet" aria-label="Mover para baixo" (click)="moveItem(item, 1)">↓</button>
+              <button type="button" class="btn-danger" aria-label="Excluir item" (click)="deleteItem(item)">×</button>
+            </div>
+          </div>
         }
-      </ul>
-    </section>
-
-    <section>
-      <h2>Git</h2>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>URL do repositório</mat-label>
-        <input matInput [(ngModel)]="gitUrl" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="full">
-        <mat-label>Branch</mat-label>
-        <input matInput [(ngModel)]="gitBranch" />
-      </mat-form-field>
-      <button mat-stroked-button type="button" (click)="linkGit()">Conectar</button>
-      <button mat-stroked-button type="button" (click)="syncGit()">Sincronizar</button>
-      @if (gitStatus) {
-        <p class="meta">Status: {{ gitStatus.status }} · SHA: {{ gitStatus.lastSyncedSha || '—' }}</p>
-        @if (gitStatus.errorSummary) {
-          <p class="error">{{ gitStatus.errorSummary }}</p>
+        @if (isSelected('new-item')) {
+          <button type="button" class="editor-nav-item is-selected" disabled>
+            Novo item
+            @if (dirty) {
+              <span class="dirty-dot" aria-label="não salvo"></span>
+            }
+          </button>
         }
-      }
-    </section>
+      </nav>
+    </aside>
   }
-</main>
+
+  <main class="app-shell-main" data-testid="shell-main">
+    <header class="page-header">
+      <div class="title-row">
+        <h1 class="page-title" data-testid="page-title">{{ isNew ? 'Novo curso' : 'Editar curso' }}</h1>
+        @if (!isNew) {
+          <span
+            class="status-badge"
+            [class.status-badge--published]="isPublished()"
+            [class.status-badge--draft]="!isPublished()"
+            data-testid="course-status">
+            {{ statusLabel() }}
+          </span>
+        }
+      </div>
+      <div class="page-actions" data-testid="page-actions">
+        <a mat-button routerLink="/teacher">Voltar</a>
+        @if (!isNew) {
+          <a mat-button [routerLink]="['/courses', courseId]">Ver</a>
+          @if (isPublished()) {
+            <button mat-stroked-button type="button" data-testid="unpublish-course" (click)="unpublish()">
+              Despublicar
+            </button>
+          } @else {
+            <button mat-flat-button class="btn-primary" type="button" data-testid="publish-course" (click)="publish()">
+              Publicar curso
+            </button>
+          }
+        }
+        <button mat-flat-button class="btn-primary" type="button" data-testid="save-editor" (click)="save()">
+          Salvar
+        </button>
+      </div>
+    </header>
+
+    @if (message) {
+      <p class="message" role="status">{{ message }}</p>
+    }
+
+    @if (selection === 'details' || isNew) {
+      <section class="card editor-pane">
+        <h2>Detalhes</h2>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Título</mat-label>
+          <input matInput [(ngModel)]="title" (ngModelChange)="markDirty()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Resumo</mat-label>
+          <textarea matInput rows="3" [(ngModel)]="summary" (ngModelChange)="markDirty()"></textarea>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Categorias</mat-label>
+          <mat-select [(ngModel)]="categoryIds" multiple (ngModelChange)="markDirty()">
+            @for (category of categories; track category.id) {
+              <mat-option [value]="category.id">{{ category.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (!isNew) {
+          <h3>Git</h3>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>URL do repositório</mat-label>
+            <input matInput [(ngModel)]="gitUrl" (ngModelChange)="markDirty()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Branch</mat-label>
+            <input matInput [(ngModel)]="gitBranch" (ngModelChange)="markDirty()" />
+          </mat-form-field>
+          <div class="inline-actions">
+            <button mat-stroked-button type="button" (click)="linkGit()">Conectar</button>
+            <button mat-stroked-button type="button" (click)="syncGit()">Sincronizar</button>
+          </div>
+          @if (gitStatus) {
+            <p class="meta">Status: {{ gitStatus.status }} · SHA: {{ gitStatus.lastSyncedSha || '—' }}</p>
+            @if (gitStatus.errorSummary) {
+              <p class="error">{{ gitStatus.errorSummary }}</p>
+            }
+          }
+        }
+      </section>
+    } @else {
+      <section class="card editor-pane">
+        <h2>{{ selection === 'new-item' ? 'Novo item' : 'Editar item' }}</h2>
+        @if (selection === 'new-item') {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Tipo do item</mat-label>
+            <mat-select
+              [(ngModel)]="itemType"
+              (ngModelChange)="markDirty()"
+              data-testid="item-type">
+              <mat-option value="MARKDOWN">Markdown</mat-option>
+              <mat-option value="LINK">Link</mat-option>
+              <mat-option value="VIDEO">Vídeo</mat-option>
+            </mat-select>
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Título do item</mat-label>
+          <input
+            matInput
+            [(ngModel)]="itemTitle"
+            (ngModelChange)="markDirty()"
+            data-testid="item-title"
+            [readonly]="isExistingVideoItem()" />
+        </mat-form-field>
+
+        @if (isExistingVideoItem()) {
+          <p class="meta" data-testid="video-readonly-note">
+            Itens de vídeo existentes não podem ser alterados aqui. Apenas o título permanece visível.
+          </p>
+        } @else if (selection === 'new-item' && itemType === 'VIDEO') {
+          <div class="media-upload">
+            <label class="media-upload__label">
+              Arquivo de vídeo
+              <input type="file" accept="video/*" data-testid="video-file" (change)="onMediaSelected($event)" />
+            </label>
+            @if (mediaFileName) {
+              <p class="meta" data-testid="video-file-meta">
+                {{ mediaFileName }} · {{ mediaMimeType || 'tipo desconhecido' }} · {{ mediaFileSizeLabel }}
+              </p>
+            }
+          </div>
+        } @else if ((selection === 'new-item' && itemType === 'LINK') || isExistingLinkItem()) {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>URL do link</mat-label>
+            <input matInput [(ngModel)]="linkUrl" (ngModelChange)="markDirty()" data-testid="link-url" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Descrição do link</mat-label>
+            <textarea
+              matInput
+              rows="4"
+              [(ngModel)]="linkDescription"
+              (ngModelChange)="markDirty()"
+              data-testid="link-description"></textarea>
+          </mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Conteúdo Markdown</mat-label>
+            <textarea
+              matInput
+              rows="16"
+              [(ngModel)]="itemBody"
+              (ngModelChange)="markDirty()"
+              data-testid="item-body"></textarea>
+          </mat-form-field>
+        }
+      </section>
+    }
+  </main>
+</div>

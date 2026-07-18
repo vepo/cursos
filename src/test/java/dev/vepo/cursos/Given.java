@@ -30,25 +30,32 @@ public final class Given {
 
     public static void cleanup() {
         withTransaction(() -> {
-            var em = inject(EntityManager.class);
-            em.createQuery("DELETE FROM ItemProgress").executeUpdate();
-            em.createQuery("DELETE FROM Enrollment").executeUpdate();
-            em.createQuery("DELETE FROM CourseItem").executeUpdate();
-            em.createQuery("DELETE FROM CourseGitRepository").executeUpdate();
-            em.createQuery("DELETE FROM Course").executeUpdate();
-            em.createQuery("DELETE FROM CourseResource").executeUpdate();
-            em.createQuery("DELETE FROM Category").executeUpdate();
+            var entityManager = inject(EntityManager.class);
+            deleteAll(entityManager,
+                      "CommentUpvote",
+                      "Comment",
+                      "ItemProgress",
+                      "Enrollment",
+                      "CourseItem",
+                      "CourseGitRepository",
+                      "Course",
+                      "CourseResource",
+                      "Category");
         });
     }
 
     public static Header authenticated(long id, String username, String name, String email) {
+        return authenticated(id, username, name, email, Set.of("USER"));
+    }
+
+    public static Header authenticated(long id, String username, String name, String email, Set<String> groups) {
         var token = Jwt.issuer("https://passport.vepo.dev")
                        .upn(username)
                        .claim("username", username)
                        .claim("id", id)
                        .claim("email", email)
                        .claim("name", name)
-                       .groups(Set.of("USER"))
+                       .groups(groups)
                        .issuedAt(Instant.now())
                        .expiresAt(Instant.now().plus(1, ChronoUnit.DAYS))
                        .sign();
@@ -95,6 +102,12 @@ public final class Given {
 
     private static <T> T inject(Class<T> type) {
         return CDI.current().select(type).get();
+    }
+
+    private static void deleteAll(EntityManager entityManager, String... entityNames) {
+        for (var entityName : entityNames) {
+            entityManager.createQuery("DELETE FROM %s".formatted(entityName)).executeUpdate();
+        }
     }
 
     private static <T> T withTransaction(java.util.concurrent.Callable<T> work) {

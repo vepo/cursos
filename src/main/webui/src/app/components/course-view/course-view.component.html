@@ -1,37 +1,217 @@
 @if (detail?.course; as course) {
-  <mat-toolbar color="primary">
-    <a mat-button routerLink="/">Catálogo</a>
-    <span>{{ course.title }}</span>
-    <span class="spacer"></span>
-    @if (detail?.teaching) {
-      <a mat-button [routerLink]="['/courses', course.id, 'edit']">Editar</a>
-      <a mat-button [routerLink]="['/courses', course.id, 'students']">Alunos</a>
-      <a mat-button [routerLink]="['/courses', course.id, 'progress']">Progresso</a>
-    }
-  </mat-toolbar>
+  <div class="app-shell-page study-layout" data-testid="study-shell">
+    <aside
+      id="study-aulas-sidebar"
+      class="app-shell-sidebar study-sidebar"
+      data-testid="shell-sidebar"
+      [class.is-open]="aulasSidebarOpen"
+      aria-labelledby="study-aulas-heading">
+      <h2 id="study-aulas-heading">Aulas</h2>
+      <nav data-testid="aula-tree" aria-label="Lista de aulas">
+        @for (aula of aulas; track aula.id) {
+          <button
+            type="button"
+            class="aula"
+            [class.aula-completed]="aulaState(aula) === 'completed'"
+            [class.aula-current]="aulaState(aula) === 'current'"
+            [class.aula-locked]="aulaState(aula) === 'locked'"
+            [attr.data-aula-id]="aula.id"
+            [attr.data-aula-state]="aulaState(aula)"
+            [attr.aria-disabled]="aula.accessible ? null : 'true'"
+            (click)="openAula(aula)">
+            {{ aula.title }}
+          </button>
+        }
+      </nav>
+    </aside>
 
-  <main>
-    <p>{{ course.summary }}</p>
-    <p class="meta">Professor: {{ course.teacherName }}</p>
+    <main class="app-shell-main study-main" data-testid="shell-main">
+      <header class="page-header">
+        <div>
+          <a mat-button routerLink="/">Catálogo</a>
+          <h1>{{ course.title }}</h1>
+        </div>
+        <div class="page-actions">
+          <button
+            mat-button
+            type="button"
+            class="study-sidebar-toggle"
+            data-testid="aulas-toggle"
+            aria-controls="study-aulas-sidebar"
+            [attr.aria-expanded]="aulasSidebarOpen"
+            [attr.aria-label]="aulasSidebarToggleLabel"
+            (click)="toggleAulasSidebar()">
+            Aulas
+          </button>
+          @if (detail?.teaching) {
+            <a mat-button [routerLink]="['/teacher/courses', course.id, 'edit']">Editar</a>
+            <a mat-button [routerLink]="['/teacher/courses', course.id, 'students']">Alunos</a>
+            <a mat-button [routerLink]="['/teacher/courses', course.id, 'progress']">Progresso</a>
+          }
+        </div>
+      </header>
 
-    @for (item of detail?.items; track item.id) {
-      <article>
-        <header>
+      <section class="course-summary" data-testid="course-summary">
+        <article class="summary-panel card">
+          <h2>Sobre o curso</h2>
+          @if (course.summary) {
+            <p>{{ course.summary }}</p>
+          } @else {
+            <p class="muted">Sem resumo cadastrado.</p>
+          }
+        </article>
+        <article class="summary-panel card">
+          <h2>Sobre o autor</h2>
+          <div class="author-summary">
+            <span class="avatar-initial" aria-hidden="true">{{ teacherInitial() }}</span>
+            <div class="author-summary__body">
+              <strong>{{ course.teacherName || course.teacherUsername }}</strong>
+              @if (course.teacherDescription) {
+                <p>{{ course.teacherDescription }}</p>
+              } @else {
+                <p class="muted">Autor ainda não adicionou uma descrição.</p>
+              }
+            </div>
+          </div>
+        </article>
+      </section>
+
+    @if (selectedAula; as item) {
+      <article data-testid="aula-content" class="aula-content">
+        <header class="aula-header">
           <h2>{{ item.title }}</h2>
           @if (detail?.enrolled) {
-            <mat-checkbox [checked]="isCompleted(item)" (change)="toggle(item, $event.checked)">Concluído</mat-checkbox>
+            <button
+              mat-flat-button
+              class="btn-primary"
+              type="button"
+              data-testid="concluir-aula"
+              (click)="completeAula()">
+              Concluir aula
+            </button>
           }
         </header>
         @if (item.itemType === 'MARKDOWN') {
-          <pre class="markdown">{{ item.markdownBody }}</pre>
-        } @else if (item.resourceId) {
-          @if (item.itemType === 'IMAGE') {
-            <img [src]="'/api/courses/' + courseId + '/resources/' + item.resourceId" [alt]="item.title || ''" />
-          } @else {
-            <video controls [src]="'/api/courses/' + courseId + '/resources/' + item.resourceId"></video>
-          }
+          <div class="markdown" [innerHTML]="renderMarkdown(item.markdownBody)"></div>
+        } @else if (item.itemType === 'LINK') {
+          <div class="link-resource card">
+            @if (item.linkDescription) {
+              <p class="link-resource__description">{{ item.linkDescription }}</p>
+            } @else {
+              <p class="muted">Recurso externo</p>
+            }
+            @if (item.linkUrl) {
+              <a
+                class="btn-primary"
+                data-testid="open-link-resource"
+                [href]="item.linkUrl"
+                target="_blank"
+                rel="noopener noreferrer">Abrir recurso</a>
+            }
+          </div>
+        } @else if (item.itemType === 'VIDEO') {
+          <div class="media-frame card">
+            @if (playbackLoading) {
+              <p class="muted" data-testid="video-loading">Carregando vídeo…</p>
+            } @else if (playbackError) {
+              <p class="error" data-testid="video-error" role="alert">{{ playbackError }}</p>
+            } @else if (playbackUrl) {
+              <video controls [src]="playbackUrl" data-testid="video-player"></video>
+            }
+          </div>
+        } @else if (item.itemType === 'IMAGE' && item.resourceId) {
+          <div class="media-frame card">
+            <img [src]="imageResourceUrl(item.resourceId)" [alt]="item.title || ''" />
+          </div>
         }
+
+        <section data-testid="aula-discussion" aria-labelledby="aula-discussion-heading">
+          <h3 id="aula-discussion-heading">Comentários</h3>
+          <ul class="comment-list" aria-live="polite">
+            @for (comment of displayedComments; track comment.id) {
+              <li
+                class="comment-card card"
+                [attr.data-comment-id]="comment.id"
+                [attr.data-caller-upvoted]="comment.callerUpvoted ? 'true' : 'false'"
+                [attr.data-comment-hidden]="comment.hidden ? 'true' : null"
+                [class.comment-hidden]="comment.hidden">
+                <div class="comment-author">
+                  <span class="avatar-initial" aria-hidden="true">{{ authorInitial(comment) }}</span>
+                  <div>
+                    <strong>{{ comment.authorName || comment.authorUsername }}</strong>
+                    @if (comment.createdAt) {
+                      <time class="comment-time">{{ relativeTime(comment.createdAt) }}</time>
+                    }
+                  </div>
+                </div>
+                <p class="comment-content">{{ comment.content }}</p>
+                <div class="comment-actions">
+                  <button
+                    type="button"
+                    class="upvote-pill"
+                    data-testid="comment-upvote"
+                    [attr.aria-label]="'upvote, ' + (comment.count ?? 0)"
+                    [attr.aria-pressed]="comment.callerUpvoted ? 'true' : 'false'"
+                    (click)="toggleUpvote(comment)">
+                    ▲ {{ comment.count ?? 0 }}
+                  </button>
+                  @if (detail?.teaching) {
+                    @if (comment.hidden) {
+                      <button
+                        type="button"
+                        class="btn-quiet"
+                        data-testid="restore-comment"
+                        aria-label="Restaurar comentário"
+                        (click)="restoreComment(comment)">
+                        Restaurar
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn-quiet"
+                        data-testid="hide-comment"
+                        aria-label="Ocultar comentário"
+                        (click)="hideComment(comment)">
+                        Ocultar
+                      </button>
+                    }
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+
+          <div class="comment-compose card">
+            <span class="avatar-initial" aria-hidden="true">{{ currentUserInitial() }}</span>
+            <div class="comment-compose__fields">
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Participe da discussão…</mat-label>
+                <textarea
+                  matInput
+                  name="comment"
+                  data-testid="comment-input"
+                  rows="3"
+                  [(ngModel)]="commentDraft"
+                  [attr.aria-invalid]="commentError ? 'true' : null"
+                  [attr.aria-describedby]="commentError ? 'comment-error' : null"></textarea>
+              </mat-form-field>
+              <button
+                mat-flat-button
+                class="btn-primary"
+                type="button"
+                data-testid="publish-comment"
+                [disabled]="!commentDraft.trim()"
+                (click)="publishComment()">
+                Comentar
+              </button>
+            </div>
+          </div>
+          @if (commentError) {
+            <p id="comment-error" class="error" role="alert">{{ commentError }}</p>
+          }
+        </section>
       </article>
     }
-  </main>
+    </main>
+  </div>
 }

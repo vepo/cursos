@@ -2,7 +2,6 @@ import { DecimalPipe } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { ProgressApi } from '../../generated/api/progress.service';
 import { ProgressSummaryResponse } from '../../generated/model/progressSummaryResponse';
 
@@ -10,7 +9,7 @@ import { ProgressSummaryResponse } from '../../generated/model/progressSummaryRe
   selector: 'app-course-progress',
   templateUrl: './course-progress.component.html',
   styleUrl: './course-progress.component.scss',
-  imports: [RouterLink, MatToolbarModule, MatButtonModule, DecimalPipe]
+  imports: [RouterLink, MatButtonModule, DecimalPipe]
 })
 export class CourseProgressComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);

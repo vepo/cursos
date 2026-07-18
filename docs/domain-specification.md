@@ -20,6 +20,8 @@ erDiagram
     Course ||--o{ CourseItem : contains
     Enrollment ||--o{ ItemProgress : tracks
     CourseItem ||--o{ ItemProgress : measured_by
+    CourseItem ||--o{ Comment : discusses
+    Comment ||--o{ CommentUpvote : receives
     Course ||--o| GitCourseLink : syncs_from
 ```
 
@@ -36,7 +38,9 @@ Cursos is a **modular monolith**: one deployable, feature packages under `dev.ve
 | **Catalog** | `catalog` | platform, identity, course, enrollment |
 | **Course** | `course` (incl. `course.category`, `course.item`) | platform, identity |
 | **Enrollment** | `enrollment` | platform, identity, course, mailer |
-| **Progress** | `progress` | platform, identity, course, enrollment |
+| **Progress** | `progress` | platform, identity, course, enrollment, study |
+| **Study** | `study` | platform, identity, course, enrollment, progress |
+| **Discussion** | `discussion` | platform, identity, course, enrollment, study |
 | **Email** | `mailer` | platform, identity |
 | **Git course sync** | `git` | platform, identity, course — **post-MVP** |
 
@@ -60,32 +64,68 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Cursos** | The product (online course platform). | UI title |
 | **Passport** | External identity service issuing JWT. | Login at `:8080`; not part of Cursos codebase |
 | **Identity** | Local mirror of a Passport user (id, name, email). | `Identity`, `tb_identities`; keyed by `passport_user_id` |
-| **Teacher** | User who **created** a course — not a global role. | `Course.teacherId`; UI **Professor** / section **Ensinando** |
+| **Teacher** | User who **created** a course — not a global role. | `Course.teacherId`; UI **Professor**; area **Ensinar** |
 | **Student** | User with an **enrollment** on a course. | `Enrollment.studentId`; UI **Aluno** / section **Matriculado** |
 | **Session** | Authenticated state via Passport JWT Bearer token. | Angular `auth.interceptor.ts` |
+| **Cursos admin** | Passport role for platform administration in Cursos. | JWT group `cursos.admin`; controls **Admin** menu and category writes |
 
 ### Catalog
 
 | Term | Meaning | Code / notes |
 |------|---------|--------------|
-| **Catalog home** | Landing page with three course sections. | Route `/`; UI **Início** |
-| **Ensinando** | Catalog section: courses the current user **teaches**. | `GET /catalog/teaching` |
+| **Catalog home** | Student-first landing page with **Ensinando**, **Matriculado**, and **Disponível / Solicitado**. | Route `/`; reached through **Aprender → Catálogo** |
+| **Ensinando** | Catalog section: courses the current user teaches (draft or published). | Catalog `teaching` bucket; actions Visualizar / Editar / Publicar / Despublicar |
+| **Teaching courses** | Courses the current user teaches. | Also under **Ensinar → Meus cursos** |
+| **Author description** | Public biography of a course teacher, owned by Passport User. | Live-loaded for course summary; not Passport Profile (roles) |
+| **Sobre o curso** | Course summary panel on the study page. | Course `summary` |
+| **Sobre o autor** | Author panel on the study page with live name and description. | Passport public author projection |
 | **Matriculado** | Catalog section: courses where enrollment status is **ENROLLED**. | `GET /catalog/enrolled` |
 | **Disponível / Solicitado** | Catalog section: published courses available to request, plus courses with **REQUESTED** enrollment by current user. | `GET /catalog/available`; UI **Disponível / Solicitado** |
 | **Category** | Label grouping courses (e.g. Programming, Design). | `Category`, `tb_categories`; UI **Categoria** |
+
+### UI shell
+
+| Term | Meaning | Code / notes |
+|------|---------|--------------|
+| **Visual shell** | Dark application frame (GitHub-dark developer palette): near-black **header**, contextual **sidebar**, and **main** content region. | Dark-only; CSS variables and shared `.app-shell-*` classes |
+| **Header** | Persistent top bar containing the Cursos brand and session actions. | Authenticated: display name → **Minha conta**, **Sair**, then the **menu icon**; unauthenticated: **Entrar** |
+| **Sidebar** | Left near-black region whose contents depend on the current screen. | Catalog categories, study aula tree, teaching-course list, or editor item list |
+| **Main** | Primary dark content region beside or below the contextual sidebar. | Nested teacher/admin pages use this region without a second toolbar |
+| **Menu icon** | Top-right authenticated control that opens or closes the navigation drawer. | Closed by default; `aria-expanded` reflects state |
+| **Navigation menu** | Right-anchored drawer containing at most two navigation levels. | Closes on toggle, leaf navigation, or Escape; full-width on narrow viewports |
+| **Aprender** | Navigation group for student learning entry points. | **Catálogo**, **Meus cursos** |
+| **Ensinar** | Navigation group for teacher authoring and course management. | **Meus cursos**, **Novo curso** |
+| **Conta** | Navigation group for account self-service. | **Minha conta** |
+| **Minha conta** | Screen where the user views/edits own name and email and changes password. | Route `/account` |
+| **Admin** | Role-gated navigation group for platform administration. | Visible only to **Cursos admin**; **Categorias** |
 
 ### Course & content
 
 | Term | Meaning | Code / notes |
 |------|---------|--------------|
 | **Course** | A teachable unit: title, description, category, teacher, published flag. | `Course`, `tb_courses` |
-| **Published course** | Course visible in **Disponível / Solicitado** for enrollment requests. | `Course.published = true` |
+| **Published course** | Course visible in **Disponível / Solicitado** for enrollment requests. | Status **PUBLISHED**; UI **Publicado** / **Publicar curso** |
+| **Draft course** | Course not listed for enrollment. | Status **DRAFT**; UI **Rascunho** / **Despublicar** |
+| **Unpublish** | Teacher action returning a published course to draft. | `POST /courses/{id}/unpublish`; UI **Despublicar** |
 | **Course item** | Single ordered piece of course content. | `CourseItem`, `tb_course_items` |
 | **Item order** | Zero-based position determining display sequence. | `CourseItem.position` |
-| **Markdown item** | Course item type storing rich text in `markdown_text`. | `CourseItemType.MARKDOWN` |
-| **Image item** | Course item type storing binary image in `media_content`. | `CourseItemType.IMAGE` |
-| **Video item** | Course item type storing binary video in `media_content`. | `CourseItemType.VIDEO` |
+| **Markdown item** | Course item type storing rich text. | `CourseItemType.MARKDOWN` |
+| **Image item** | Course item type storing binary image in `tb_course_resources`. | `CourseItemType.IMAGE` |
+| **Video item** / **Video aula** | Course item type storing binary video in PostgreSQL. | `CourseItemType.VIDEO`; seekable via **Playback ticket** |
+| **Link item** / **Link aula** | Course item type with an external HTTPS URL and optional description. | `CourseItemType.LINK`; UI **Abrir recurso** |
+| **Playback ticket** | Short-lived signed URL authorizing Range streaming of a media resource. | Issued after JWT auth; used by `<video>` without Bearer header |
 | **Reorder items** | Teacher action changing item sequence. | `POST …/items/reorder` |
+
+### Aula discussion
+
+| Term | Meaning | Code / notes |
+|------|---------|--------------|
+| **Aula** | Student-facing name for one ordered **course item** in the study experience. | UI term; domain code remains `CourseItem` |
+| **Comment** | A user's message attached to one aula. | UI **Comentário**; author is a Passport identity |
+| **Comentar** | Action that posts a new comment on the selected aula. | Discussion composer CTA (not course publish) |
+| **Upvote** | Positive-only vote on a comment, unique per user/comment; a second click removes it. Downvotes do not exist. | UI **▲** |
+| **Hide comment** | Course teacher moderation action that suppresses a comment from students without deleting its record. | UI **Ocultar comentário** |
+| **Hidden comment** | Comment retained for moderation audit; students cannot see it (omitted from student discussion list/API — no placeholder). | Course teacher may restore; authors cannot edit/delete comments in v1 |
 
 ### Enrollment
 
@@ -144,6 +184,9 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 1. **MARKDOWN** items must have non-empty `markdown_text`; `media_content` is null.
 2. **IMAGE** and **VIDEO** items must have non-null `media_content` and `media_content_type`.
 3. Enrolled students and the teacher may **read** items; only the teacher may **mutate** items.
+4. The first **aula** is accessible; each later aula is accessible to a student only after all preceding item positions are complete.
+5. Sequential accessibility is enforced by the API and UI. Locked content, progress, and discussion operations return 403.
+6. The course teacher bypasses sequential locking for preview.
 
 ### Enrollment
 
@@ -156,20 +199,36 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 ### Progress
 
 1. **Item progress** exists only for **ENROLLED** students.
-2. **Mark complete** is allowed for the enrolled student on their own enrollment.
+2. **Mark complete** is a completion toggle allowed for the enrolled student on their own enrollment and only for an accessible aula.
 3. **Teacher adjust** is allowed only for the course teacher on enrollments for that course.
 4. **Progress percentage** uses all course items as denominator; items without progress rows count as incomplete.
+5. Un-completing an aula relocks later aulas until all preceding aulas are complete again; their progress and discussions remain stored.
 
 ### Catalog
 
-1. **Ensinando** lists courses where `teacher_id = current user`.
+1. The catalog home omits teaching courses; **Ensinar → Meus cursos** lists courses where `teacher_id = current user`.
 2. **Matriculado** lists courses with **ENROLLED** enrollment for current user.
 3. **Disponível / Solicitado** lists published courses not taught by current user, excluding **ENROLLED**; includes **REQUESTED** with badge.
+
+### Aula discussion
+
+1. Only an enrolled student or the course teacher may list, create, or upvote aula comments.
+2. Student discussion operations require an accessible aula. If it relocks, comments remain stored but unreadable until it unlocks again.
+3. One **upvote** exists per user/comment; repeating the action removes it.
+4. Only the course teacher may hide or restore a comment.
+5. A **hidden comment** is omitted from student-facing discussion lists and APIs; students see neither content nor a placeholder.
+6. Comment authors cannot edit or delete their comments in v1.
+
+### Administration
+
+1. **Admin** is visible only when the Passport JWT contains `cursos.admin`.
+2. Category create/update operations require `cursos.admin`; authenticated catalog users may list categories.
 
 ### Git sync (post-MVP)
 
 1. Sync never deletes enrollments or progress — item mapping uses stable keys from `course.yml`.
-2. Implement only after MVP platform is **done**.
+2. Sync uses **JGit** (embedded), not a native `git` executable.
+3. Implement only after MVP platform is **done**.
 
 ---
 
@@ -223,6 +282,21 @@ erDiagram
         timestamp completed_at
         boolean adjusted_by_teacher
     }
+    Comment {
+        bigint id PK
+        bigint course_item_id FK
+        bigint author_passport_user_id
+        text content
+        timestamp created_at
+        timestamp hidden_at
+        bigint moderator_passport_user_id
+    }
+    CommentUpvote {
+        bigint id PK
+        bigint comment_id FK
+        bigint voter_passport_user_id
+        timestamp created_at
+    }
     GitCourseLink {
         bigint id PK
         bigint course_id FK
@@ -239,6 +313,8 @@ erDiagram
     Course ||--o{ Enrollment : has
     Enrollment ||--o{ ItemProgress : tracks
     CourseItem ||--o{ ItemProgress : for_item
+    CourseItem ||--o{ Comment : discusses
+    Comment ||--o{ CommentUpvote : receives
     Course ||--o| GitCourseLink : git_link
 ```
 
@@ -248,8 +324,8 @@ erDiagram
 
 | Domain term | UI label |
 |-------------|----------|
-| Catalog home | Início |
-| Ensinando | Ensinando |
+| Catalog home | Catálogo |
+| Teaching courses | Meus cursos |
 | Matriculado | Matriculado |
 | Disponível / Solicitado | Disponível / Solicitado |
 | Category | Categoria |
@@ -260,6 +336,14 @@ erDiagram
 | Reject | Recusar |
 | Direct enroll | Matricular aluno |
 | Progress | Progresso |
-| Mark complete | Marcar como concluído |
+| Mark complete | Concluir aula |
+| Navigation menu | Aprender / Ensinar / Admin |
+| Visual shell | Dark application frame |
+| Header | Cursos / user / Sair / menu icon |
+| Sidebar | Categorias / Aulas / Meus cursos |
+| Main | Primary content area |
+| Menu icon | Abrir menu / Fechar menu |
+| Hide comment | Ocultar comentário |
+| Restore comment | Restaurar comentário |
 
 English UI (if added later) must map to the same domain terms in code.

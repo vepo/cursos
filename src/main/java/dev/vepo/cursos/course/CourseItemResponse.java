@@ -7,6 +7,8 @@ public record CourseItemResponse(
                                  CourseItemType itemType,
                                  int sortOrder,
                                  String markdownBody,
+                                 String linkUrl,
+                                 String linkDescription,
                                  Long resourceId,
                                  String sourcePath) {
 
@@ -17,6 +19,8 @@ public record CourseItemResponse(
                                       item.getItemType(),
                                       item.getSortOrder(),
                                       item.getItemType() == CourseItemType.MARKDOWN ? item.getMarkdownBody() : null,
+                                      item.getItemType() == CourseItemType.LINK ? item.getLinkUrl() : null,
+                                      item.getItemType() == CourseItemType.LINK ? item.getLinkDescription() : null,
                                       item.getResource() != null ? item.getResource().getId() : null,
                                       item.getSourcePath());
     }

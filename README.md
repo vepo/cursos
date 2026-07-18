@@ -47,9 +47,10 @@ Use Passport dev seed credentials (same as Backoffice):
 
 | User | Email | Password | Notes |
 |------|-------|----------|-------|
-| `cto-boss` | `cto@passport.vepo.dev` | `qwas1234` | Full platform access via Passport profiles |
+| `cto-boss` | `cto@passport.vepo.dev` | `qwas1234` | Teacher + `cursos.admin`; **Admin → Categorias** |
+| `junior` | `junior_dev@passport.vepo.dev` | `qwas1234` | Enrolled student (first aula done; later aulas locked) |
 
-Log in through the Cursos UI (redirects to Passport or uses stored JWT after login). Cursos reads the Passport JWT `sub` claim as the user identity.
+Log in through the Cursos UI. Open the top-right menu icon for **Aprender**, **Ensinar**, and role-gated **Admin**.
 
 ### After backend API changes
 
@@ -60,22 +61,36 @@ cd src/main/webui && npm run generate:api
 
 Generated TypeScript clients land in `src/app/generated/` (gitignored). Angular facades in `services/` wrap the generated `*Api` classes.
 
-## Features (MVP — planned)
+## Features
 
 ### Catalog & courses
 
-- **Home catalog** — three sections: **Ensinando** (courses you teach), **Matriculado** (enrolled courses), **Disponível / Solicitado** (available to request or pending approval)
-- **Categories** — classify courses for browsing and filtering
-- **Course** — title, description, category; creator is the **teacher**
-- **Course items** — ordered content blocks: **MARKDOWN**, **IMAGE**, **VIDEO** (media stored in PostgreSQL `bytea`)
+- **Catalog home** — **Ensinando**, **Matriculado**, and **Disponível / Solicitado** (taught courses stay out of Available)
+- **Visual shell** — GitHub-dark developer workspace with contextual category, aula, teaching, or editor sidebars
+- **Navigation drawer** — top-right, click-only access to **Aprender**, **Ensinar**, **Conta**, and role-gated **Admin**
+- **Minha conta** — edit name/email/author description and change password via Passport
+- **Categories** — classify courses; create requires `cursos.admin`
+- **Course** — title, description, categories; creator is the **teacher**; clear **Publicar curso** / **Despublicar**
+- **Course items / aulas** — ordered **MARKDOWN**, **LINK**, **IMAGE**, **VIDEO** (video in PostgreSQL `BYTEA` with signed Range playback); two-pane editor with unsaved-changes warnings
+
+### Study & discussion
+
+- **Course summary** — **Sobre o curso** and live **Sobre o autor** panels on the study page
+- **Sequential unlock** — first aula open; later aulas unlock only after previous ones are completed (teacher preview bypasses)
+- **Rendered markdown** — sanitized HTML with heading sizes below the aula title; raw markdown only when editing
+- **Link aulas** — safe **Abrir recurso** (`target="_blank"`, `rel="noopener noreferrer"`)
+- **Video aulas** — authenticated playback tickets and seekable HTTP Range streaming
+- **Comments** — enrolled students and teacher discuss accessible aulas (**Comentar**)
+- **Upvotes** — positive-only, one per user/comment (toggle)
+- **Moderation** — teacher can hide/restore comments; students never see hidden ones
 
 ### Enrollment & progress
 
-- **Enrollment request** — student self-enrolls → status **REQUESTED** until teacher approves
+- **Enrollment request** — student self-enrolls → **REQUESTED** until teacher approves
 - **Direct enrollment** — teacher adds a student by email; optional notification email
-- **Progress** — student marks items complete; teacher can adjust; **progress percentage** derived from completed items vs total items
+- **Progress** — students mark aulas complete; teachers can adjust; percentage from completed items
 
-### Post-MVP (designed, not yet implemented)
+### Post-MVP (designed)
 
 - **Git course sync** — `course.yml` in a repository syncs content into course items ([feature/git-course-sync.md](feature/git-course-sync.md))
 

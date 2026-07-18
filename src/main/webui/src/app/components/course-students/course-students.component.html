@@ -1,9 +1,11 @@
-<mat-toolbar color="primary">
-  <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
-  <span>Alunos</span>
-</mat-toolbar>
+<main class="app-shell-main nested-page nested-page--wide" data-testid="shell-main">
+  <header class="page-header">
+    <h1 class="page-title" data-testid="page-title">Alunos</h1>
+    <div class="page-actions" data-testid="page-actions">
+      <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
+    </div>
+  </header>
 
-<main>
   <section>
     <h2>Inscrições</h2>
     <ul>

@@ -6,8 +6,8 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import dev.vepo.cursos.category.CategoryResponse;
 import dev.vepo.cursos.category.CategoryService;
 import dev.vepo.cursos.category.CreateCategoryRequest;
-import io.quarkus.security.Authenticated;
 import jakarta.annotation.security.DenyAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -33,7 +33,7 @@ public class CreateCategoryEndpoint {
     }
 
     @POST
-    @Authenticated
+    @RolesAllowed("cursos.admin")
     @Operation(operationId = "createCategory")
     public CategoryResponse create(@Valid CreateCategoryRequest request) {
         return CategoryResponse.load(categoryService.create(request));

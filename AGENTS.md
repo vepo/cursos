@@ -33,6 +33,8 @@ Single Maven module; logical packages under `dev.vepo.cursos.*`:
 | Course | `course` |
 | Enrollment | `enrollment` |
 | Progress | `progress` |
+| Study | `study` |
+| Discussion | `discussion` |
 | Email | `mailer` |
 | Git course sync | `git` — **design now; implement after MVP** |
 

@@ -41,6 +41,8 @@ CREATE TABLE tb_course_items (
     item_type VARCHAR(20) NOT NULL,
     sort_order INT NOT NULL,
     markdown_body TEXT,
+    link_url VARCHAR(2000),
+    link_description VARCHAR(2000),
     resource_id BIGINT REFERENCES tb_course_resources (id) ON DELETE SET NULL,
     source_path VARCHAR(500),
     created_at TIMESTAMPTZ NOT NULL,
@@ -74,6 +76,35 @@ CREATE TABLE tb_item_progress (
     actor_passport_user_id BIGINT NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     UNIQUE (enrollment_id, course_item_id)
+);
+
+CREATE TABLE tb_comments (
+    id BIGSERIAL PRIMARY KEY,
+    course_item_id BIGINT NOT NULL REFERENCES tb_course_items (id) ON DELETE CASCADE,
+    author_passport_user_id BIGINT NOT NULL,
+    author_username VARCHAR(64) NOT NULL,
+    author_name VARCHAR(200) NOT NULL,
+    author_email VARCHAR(320) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    hidden_at TIMESTAMPTZ,
+    moderator_passport_user_id BIGINT,
+    moderator_username VARCHAR(64),
+    moderator_name VARCHAR(200),
+    moderator_email VARCHAR(320)
+);
+
+CREATE INDEX idx_comments_course_item_hidden ON tb_comments (course_item_id, hidden_at);
+
+CREATE TABLE tb_comment_upvotes (
+    id BIGSERIAL PRIMARY KEY,
+    comment_id BIGINT NOT NULL REFERENCES tb_comments (id) ON DELETE CASCADE,
+    voter_passport_user_id BIGINT NOT NULL,
+    voter_username VARCHAR(64) NOT NULL,
+    voter_name VARCHAR(200) NOT NULL,
+    voter_email VARCHAR(320) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (comment_id, voter_passport_user_id)
 );
 
 CREATE TABLE tb_course_git_repositories (

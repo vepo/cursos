@@ -13,6 +13,14 @@ export interface LoginResponse {
   };
 }
 
+interface JwtPayload {
+  id?: number;
+  username?: string;
+  name?: string;
+  email?: string;
+  groups?: unknown;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -41,8 +49,17 @@ export class AuthService {
     return payload?.name ?? payload?.username ?? null;
   }
 
+  getUsername(): string | null {
+    return this.payload()?.username ?? null;
+  }
+
   getEmail(): string | null {
     return this.payload()?.email ?? null;
+  }
+
+  hasRole(role: string): boolean {
+    const groups = this.payload()?.groups;
+    return Array.isArray(groups) && groups.includes(role);
   }
 
   logout(): void {
@@ -53,13 +70,19 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  private payload(): { id?: number; username?: string; name?: string; email?: string } | null {
+  private payload(): JwtPayload | null {
     const token = this.getToken();
     if (!token) {
       return null;
     }
     try {
-      return JSON.parse(atob(token.split('.')[1]));
+      const encodedPayload = token.split('.')[1];
+      if (!encodedPayload) {
+        return null;
+      }
+      const base64 = encodedPayload.replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+      return JSON.parse(atob(padded));
     } catch {
       return null;
     }

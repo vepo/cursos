@@ -69,6 +69,20 @@ class CoursePlatformEndpointTest {
                .statusCode(HttpStatus.SC_OK)
                .body("status", equalTo("PUBLISHED"));
 
+        given().header(teacherAuth)
+               .when()
+               .post("/api/courses/{id}/unpublish", courseId)
+               .then()
+               .statusCode(HttpStatus.SC_OK)
+               .body("status", equalTo("DRAFT"));
+
+        given().header(teacherAuth)
+               .when()
+               .post("/api/courses/{id}/publish", courseId)
+               .then()
+               .statusCode(HttpStatus.SC_OK)
+               .body("status", equalTo("PUBLISHED"));
+
         given().header(studentAuth)
                .when()
                .get("/api/catalog/courses")

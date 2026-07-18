@@ -1,6 +1,10 @@
 package dev.vepo.cursos.course.item.content;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import dev.vepo.cursos.course.CourseService;
@@ -37,6 +41,7 @@ public class DownloadCourseResourceEndpoint {
     @GET
     @Authenticated
     @Operation(operationId = "downloadCourseResource")
+    @APIResponse(responseCode = "200", content = @Content(mediaType = "application/octet-stream", schema = @Schema(type = SchemaType.STRING, format = "binary")))
     public Response download(@PathParam("courseId") long courseId, @PathParam("resourceId") long resourceId) {
         var user = currentPassportUser.require();
         var course = courseService.require(courseId);
@@ -47,7 +52,7 @@ public class DownloadCourseResourceEndpoint {
         if (!teacher && !enrolled && course.getStatus() != CourseStatus.PUBLISHED) {
             throw CursosException.forbidden("Not allowed to download resource");
         }
-        var resource = courseService.requireResource(resourceId);
+        var resource = courseService.requireResourceOfCourse(courseId, resourceId);
         return Response.ok(resource.getContent())
                        .type(resource.getContentType())
                        .header("Content-Disposition", "inline; filename=\"%s\"".formatted(resource.getFilename()))

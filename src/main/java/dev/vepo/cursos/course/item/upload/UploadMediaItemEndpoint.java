@@ -3,6 +3,7 @@ package dev.vepo.cursos.course.item.upload;
 import java.io.IOException;
 
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
@@ -43,9 +44,12 @@ public class UploadMediaItemEndpoint {
     @Authenticated
     @Operation(operationId = "uploadMediaItem")
     public CourseItemResponse upload(@PathParam("courseId") long courseId,
-                                     @RestForm("title") String title,
-                                     @RestForm("type") String type,
-                                     @RestForm("file") FileUpload file) {
+                                     @RestForm("title") @Schema(required = true) String title,
+                                     @RestForm("type") @Schema(required = true) String type,
+                                     @RestForm("file") @Schema(required = true, type = org.eclipse.microprofile.openapi.annotations.enums.SchemaType.STRING, format = "binary") FileUpload file) {
+        if (file == null) {
+            throw CursosException.badRequest("Media file is required");
+        }
         try {
             var itemType = CourseItemType.valueOf(type.toUpperCase());
             var bytes = java.nio.file.Files.readAllBytes(file.uploadedFile());

@@ -8,7 +8,11 @@ One markdown file per **high-level capability**: `feature/<feature-slug>.md` (ke
 
 | Capability | File | Status |
 |------------|------|--------|
-| Cursos platform MVP | [cursos-platform.md](cursos-platform.md) | tasks-ready |
+| Cursos platform MVP | [cursos-platform.md](cursos-platform.md) | done |
+| Student study experience & teacher area | [student-study-experience.md](student-study-experience.md) | done |
+| UI visual shell | [ui-visual-shell.md](ui-visual-shell.md) | done (GitHub-dark) |
+| Account settings | [account-settings.md](account-settings.md) | done |
+| Course authoring UX | [course-authoring-ux.md](course-authoring-ux.md) | done |
 | Git course sync | [git-course-sync.md](git-course-sync.md) | architecture-ready (post-MVP) |
 
 ## Resolving `<feature-slug>`
