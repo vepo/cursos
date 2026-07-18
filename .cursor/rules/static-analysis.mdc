@@ -1,0 +1,63 @@
+---
+description: Run local static analysis and fix new cursos before finishing a task
+alwaysApply: true
+---
+
+# Static analysis — finish checklist
+
+**Working code only:** do not end development — `done` or `in-progress` — with a failing `mvn verify`, broken `npm run build`, or compile/linter errors in files you changed. Fix or revert first.
+
+Before marking a coding task **done**, run **local** checks only (no SonarCloud tokens required for the gate).
+
+## When to run
+
+- After production or test code changes (Java, SQL migrations, TypeScript you edited).
+- Skip for docs-only, `.mdc` rules-only, or comment-only edits.
+
+## Required commands
+
+Primary gate — align with [`.github/workflows/build.yml`](../../.github/workflows/build.yml):
+
+```bash
+mvn verify
+```
+
+When Angular files changed, also run:
+
+```bash
+cd src/main/webui && npm run build
+cd src/main/webui && npm test -- --no-watch --browsers=ChromeHeadless
+```
+
+`npm run build` runs `generate:api` (via `prebuild`) then `ng build` — required before marking done; do not rely on `ng build` alone after API changes.
+
+Formatting (optional, faster feedback):
+
+```bash
+mvn formatter:format
+```
+
+## IDE diagnostics
+
+On changed source files, run `ReadLints` and fix **new** errors and warnings in paths you touched.
+
+## What to fix
+
+1. Compile errors and test failures from `verify`.
+2. Formatting violations — `formatter.xml` via [cursos-format-imports.mdc](cursos-format-imports.mdc).
+3. **New** linter warnings in edited files.
+4. Obvious smells you introduced — align with [cursos-java.mdc](cursos-java.mdc) and [cursos-core.mdc](cursos-core.mdc).
+
+Pre-existing cursos in unrelated files: fix only if trivial; do not scope-creep.
+
+## Do not finish while
+
+- `mvn verify` fails on your branch.
+- `npm run build` fails when `src/main/webui/**` was changed.
+- Linter reports new problems in files you changed.
+- You knowingly left failing tests in touched code.
+- You would leave the workspace in a non-runnable state — revert partial work or complete the fix loop first.
+
+## Report to the user
+
+When wrapping up, briefly note: `verify` (pass / fail fixed), formatter (ok / applied), linter (clean / cursos fixed).

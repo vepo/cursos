@@ -1,0 +1,89 @@
+<mat-toolbar color="primary">
+  <span>Cursos</span>
+  <span class="spacer"></span>
+  <span class="user">{{ auth.getDisplayName() }}</span>
+  <a mat-button routerLink="/courses/new">Novo curso</a>
+  <button mat-button type="button" (click)="logout()">Sair</button>
+</mat-toolbar>
+
+<main class="catalog">
+  <header>
+    <h1>Catálogo</h1>
+    <mat-form-field appearance="outline">
+      <mat-label>Categoria</mat-label>
+      <mat-select [(value)]="selectedCategory" (selectionChange)="reload()">
+        <mat-option value="">Todas</mat-option>
+        @for (category of categories; track category.id) {
+          <mat-option [value]="category.slug">{{ category.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  </header>
+
+  @if (catalog) {
+    <section>
+      <h2>Ensinando</h2>
+      @if (!catalog.teaching?.length) {
+        <p class="empty">Você ainda não criou cursos.</p>
+      }
+      <div class="grid">
+        @for (course of catalog.teaching; track course.id) {
+          <article>
+            <h3><a [routerLink]="['/courses', course.id]">{{ course.title }}</a></h3>
+            <p>{{ course.summary }}</p>
+            <div class="chips">
+              @for (category of course.categories; track category.id) {
+                <mat-chip>{{ category.name }}</mat-chip>
+              }
+            </div>
+            <span class="meta">{{ course.status }}</span>
+            <a mat-button [routerLink]="['/courses', course.id, 'edit']">Editar</a>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section>
+      <h2>Inscrito / Solicitado</h2>
+      @if (!catalog.enrolled?.length) {
+        <p class="empty">Nenhuma inscrição ativa.</p>
+      }
+      <div class="grid">
+        @for (course of catalog.enrolled; track course.id) {
+          <article>
+            <h3><a [routerLink]="['/courses', course.id]">{{ course.title }}</a></h3>
+            <p>{{ course.summary }}</p>
+            <div class="chips">
+              @for (category of course.categories; track category.id) {
+                <mat-chip>{{ category.name }}</mat-chip>
+              }
+            </div>
+            <span class="meta">{{ course.enrollmentStatus }}</span>
+          </article>
+        }
+      </div>
+    </section>
+
+    <section>
+      <h2>Disponíveis</h2>
+      @if (!catalog.available?.length) {
+        <p class="empty">Nenhum curso publicado disponível.</p>
+      }
+      <div class="grid">
+        @for (course of catalog.available; track course.id) {
+          <article>
+            <h3><a [routerLink]="['/courses', course.id]">{{ course.title }}</a></h3>
+            <p>{{ course.summary }}</p>
+            <div class="chips">
+              @for (category of course.categories; track category.id) {
+                <mat-chip>{{ category.name }}</mat-chip>
+              }
+            </div>
+            <span class="meta">{{ course.teacherName }}</span>
+            <button mat-stroked-button type="button" (click)="requestEnrollment(course)">Solicitar inscrição</button>
+          </article>
+        }
+      </div>
+    </section>
+  }
+</main>

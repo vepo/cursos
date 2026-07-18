@@ -1,0 +1,47 @@
+---
+description: Keep user-facing documentation in sync with API and behaviour
+globs:
+  - 'docs/**'
+  - 'README.md'
+  - 'ARCHITECTURE.md'
+alwaysApply: false
+---
+
+# Documentation — read and maintain
+
+## Before changing API or user-visible behaviour
+
+1. Skim [AGENTS.md](../../AGENTS.md) doc map.
+2. Update the **lowest complexity** doc that covers the feature.
+
+## After changes — update when relevant
+
+| Change | Update |
+|--------|--------|
+| New domain term or invariant | [domain-specification.md](../../docs/domain-specification.md) |
+| New/changed UI route | [feature-catalog.md](../../docs/feature-catalog.md) |
+| New/changed UI element (class, component, pattern) | [ui-elements-gallery.md](../../docs/ui-elements-gallery.md) |
+| Flat UI / visual language change | [ui-elements-gallery.md](../../docs/ui-elements-gallery.md) § Flat UI + [cursos-ux.mdc](cursos-ux.mdc) |
+| Package, API surface, patterns | [ARCHITECTURE.md](../../ARCHITECTURE.md) |
+| Doc debt closed | [conventions-checklist.md](../../docs/conventions-checklist.md) |
+| New/changed user-facing feature | [README.md](../../README.md) § Features — see [readme.mdc](readme.mdc) |
+| New product idea (not yet analyzed) | [backlog.md](../../docs/backlog.md) — ordered table; see [backlog-management.mdc](backlog-management.mdc) |
+| README badges or project name | [README.md](../../README.md) |
+
+## Complexity order
+
+1. **domain-specification** — vocabulary and rules
+2. **feature-catalog** — routes and click paths
+3. **ui-elements-gallery** — reusable UI components and patterns
+4. **ARCHITECTURE** — technical structure
+5. **README** — pitch and links
+
+## Quality bar
+
+- No stale type names after renames — grep docs when renaming.
+- Cross-link; avoid duplicating large blocks.
+
+## Related
+
+- Agent index: [AGENTS.md](../../AGENTS.md)
+- Docs sync subagent: [docs-sync.md](../agents/docs-sync.md)

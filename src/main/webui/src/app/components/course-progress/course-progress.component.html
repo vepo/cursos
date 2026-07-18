@@ -1,0 +1,16 @@
+<mat-toolbar color="primary">
+  <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
+  <span>Progresso</span>
+</mat-toolbar>
+
+<main>
+  @if (!summaries.length) {
+    <p>Nenhum aluno matriculado ainda.</p>
+  }
+  @for (summary of summaries; track summary.enrollmentId) {
+    <article>
+      <h2>{{ summary.studentName }}</h2>
+      <p>{{ summary.completedItems }}/{{ summary.totalItems }} ({{ summary.percentComplete | number: '1.0-1' }}%)</p>
+    </article>
+  }
+</main>

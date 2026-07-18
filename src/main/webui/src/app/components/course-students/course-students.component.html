@@ -1,0 +1,39 @@
+<mat-toolbar color="primary">
+  <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
+  <span>Alunos</span>
+</mat-toolbar>
+
+<main>
+  <section>
+    <h2>Inscrições</h2>
+    <ul>
+      @for (enrollment of enrollments; track enrollment.id) {
+        <li>
+          <strong>{{ enrollment.studentName }}</strong>
+          ({{ enrollment.studentEmail }}) — {{ enrollment.status }}
+          @if (enrollment.status === 'REQUESTED') {
+            <button mat-button type="button" (click)="approve(enrollment)">Aprovar</button>
+            <button mat-button type="button" (click)="reject(enrollment)">Recusar</button>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section>
+    <h2>Adicionar aluno</h2>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Buscar no Passport</mat-label>
+      <input matInput [(ngModel)]="query" (keyup.enter)="search()" />
+    </mat-form-field>
+    <button mat-stroked-button type="button" (click)="search()">Buscar</button>
+    <ul>
+      @for (user of matches; track user.id) {
+        <li>
+          {{ user.name }} · {{ user.email }}
+          <button mat-button type="button" (click)="enroll(user)">Matricular</button>
+        </li>
+      }
+    </ul>
+  </section>
+</main>

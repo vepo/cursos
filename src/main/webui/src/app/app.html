@@ -1,0 +1,21 @@
+<header class="main-header">
+  <div class="shell-inner">
+    <a routerLink="/" class="brand" routerLinkActive="brand-active" [routerLinkActiveOptions]="{ exact: true }">
+      <mat-icon fontIcon="school" aria-hidden="true"></mat-icon>
+      <span class="brand-name">Cursos</span>
+    </a>
+
+    <div class="grow-space"></div>
+
+    @if (isAuthenticated()) {
+      <span>{{ userEmail() }}</span>
+      <button matButton="outlined" type="button" (click)="logout()">Sair</button>
+    } @else {
+      <a matButton="outlined" routerLink="/login">Entrar</a>
+    }
+  </div>
+</header>
+
+<main class="page-content">
+  <router-outlet />
+</main>

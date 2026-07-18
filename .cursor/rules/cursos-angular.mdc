@@ -1,0 +1,51 @@
+---
+description: Angular SPA conventions for Cursos frontend
+globs: "src/main/webui/**"
+alwaysApply: false
+---
+
+# Angular conventions
+
+## UI/UX gate
+
+Before any template, style, or interaction change:
+
+1. Read [docs/ui-elements-gallery.md](../../docs/ui-elements-gallery.md) — reuse documented elements; extend the gallery when adding new ones.
+2. Apply [cursos-ux.mdc](cursos-ux.mdc) — Nielsen heuristics checklist and flat UI design language.
+
+## Structure
+
+- Components: `src/app/components/<feature>/` — `*.component.ts`, `*.html`, `*.scss`.
+- Services: `src/app/services/*.service.ts` — `providedIn: 'root'`.
+- Resolvers: `src/app/resolvers/*.resolver.ts`.
+- Routes: `src/app/app.routes.ts`.
+
+## HTTP
+
+- API types and clients: OpenAPI codegen → `src/app/generated/` (gitignored). Regenerate with `npm run generate:api` after `mvn test`.
+- Facades in `services/*.service.ts` wrap generated `*Api` classes — components inject facades, not generated services directly.
+- OpenAPI paths already include `/api`; set `BASE_PATH` to `''` in `app.config.ts` (do not double the prefix).
+- After backend endpoint changes: `mvn test` → `npm run generate:api` → align facades with generated method signatures (parameter order may differ from path order).
+- Before marking done: `npm run build` (not bare `ng build` — `prebuild` regenerates the client).
+- Attach JWT via `auth.interceptor.ts`.
+- SSE stays hand-written in `sse.client.ts`.
+
+## UI library
+
+- Angular Material for form controls, dialogs, navigation.
+- Chart.js via ng2-charts for dashboard widgets.
+
+## Tests
+
+- `*.spec.ts` alongside source; Karma/Jasmine.
+- Mock HTTP with `HttpClientTestingModule` in service tests.
+- Test component behaviour, not implementation details.
+
+## Naming
+
+- Selectors: `app-<kebab-case>` prefix.
+- Component class: `XxxComponent`; service: `XxxService`.
+
+## Domain language
+
+- UI labels should match [docs/domain-specification.md](../../docs/domain-specification.md) — Ticket, Project, Kanban, not generic "Item" or "Record".

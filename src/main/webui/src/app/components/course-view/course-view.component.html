@@ -1,0 +1,37 @@
+@if (detail?.course; as course) {
+  <mat-toolbar color="primary">
+    <a mat-button routerLink="/">Catálogo</a>
+    <span>{{ course.title }}</span>
+    <span class="spacer"></span>
+    @if (detail?.teaching) {
+      <a mat-button [routerLink]="['/courses', course.id, 'edit']">Editar</a>
+      <a mat-button [routerLink]="['/courses', course.id, 'students']">Alunos</a>
+      <a mat-button [routerLink]="['/courses', course.id, 'progress']">Progresso</a>
+    }
+  </mat-toolbar>
+
+  <main>
+    <p>{{ course.summary }}</p>
+    <p class="meta">Professor: {{ course.teacherName }}</p>
+
+    @for (item of detail?.items; track item.id) {
+      <article>
+        <header>
+          <h2>{{ item.title }}</h2>
+          @if (detail?.enrolled) {
+            <mat-checkbox [checked]="isCompleted(item)" (change)="toggle(item, $event.checked)">Concluído</mat-checkbox>
+          }
+        </header>
+        @if (item.itemType === 'MARKDOWN') {
+          <pre class="markdown">{{ item.markdownBody }}</pre>
+        } @else if (item.resourceId) {
+          @if (item.itemType === 'IMAGE') {
+            <img [src]="'/api/courses/' + courseId + '/resources/' + item.resourceId" [alt]="item.title || ''" />
+          } @else {
+            <video controls [src]="'/api/courses/' + courseId + '/resources/' + item.resourceId"></video>
+          }
+        }
+      </article>
+    }
+  </main>
+}

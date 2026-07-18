@@ -1,0 +1,17 @@
+.spacer { flex: 1; }
+main { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+.meta { color: #5b6573; }
+article {
+  margin: 1.5rem 0;
+  padding: 1rem 0;
+  border-top: 1px solid #d7dde5;
+}
+header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.markdown {
+  white-space: pre-wrap;
+  font-family: inherit;
+  background: #f6f8fb;
+  padding: 1rem;
+  border-radius: 6px;
+}
+img, video { max-width: 100%; }

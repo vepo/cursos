@@ -1,0 +1,75 @@
+<mat-toolbar color="primary">
+  <a mat-button routerLink="/">Catálogo</a>
+  <span>{{ isNew ? 'Novo curso' : 'Editar curso' }}</span>
+</mat-toolbar>
+
+<main>
+  @if (message) {
+    <p class="message">{{ message }}</p>
+  }
+
+  <section>
+    <h2>Detalhes</h2>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Título</mat-label>
+      <input matInput [(ngModel)]="title" />
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Resumo</mat-label>
+      <textarea matInput rows="3" [(ngModel)]="summary"></textarea>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full">
+      <mat-label>Categorias</mat-label>
+      <mat-select [(ngModel)]="categoryIds" multiple>
+        @for (category of categories; track category.id) {
+          <mat-option [value]="category.id">{{ category.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    <button mat-flat-button color="primary" type="button" (click)="save()">Salvar</button>
+    @if (!isNew) {
+      <button mat-stroked-button type="button" (click)="publish()">Publicar</button>
+      <a mat-button [routerLink]="['/courses', courseId]">Ver</a>
+    }
+  </section>
+
+  @if (!isNew) {
+    <section>
+      <h2>Item Markdown</h2>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Título do item</mat-label>
+        <input matInput [(ngModel)]="markdownTitle" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Conteúdo</mat-label>
+        <textarea matInput rows="8" [(ngModel)]="markdownBody"></textarea>
+      </mat-form-field>
+      <button mat-stroked-button type="button" (click)="addMarkdown()">Adicionar item</button>
+      <ul>
+        @for (item of detail?.items; track item.id) {
+          <li>{{ item.sortOrder }} — {{ item.title }} ({{ item.itemType }})</li>
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h2>Git</h2>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>URL do repositório</mat-label>
+        <input matInput [(ngModel)]="gitUrl" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Branch</mat-label>
+        <input matInput [(ngModel)]="gitBranch" />
+      </mat-form-field>
+      <button mat-stroked-button type="button" (click)="linkGit()">Conectar</button>
+      <button mat-stroked-button type="button" (click)="syncGit()">Sincronizar</button>
+      @if (gitStatus) {
+        <p class="meta">Status: {{ gitStatus.status }} · SHA: {{ gitStatus.lastSyncedSha || '—' }}</p>
+        @if (gitStatus.errorSummary) {
+          <p class="error">{{ gitStatus.errorSummary }}</p>
+        }
+      }
+    </section>
+  }
+</main>

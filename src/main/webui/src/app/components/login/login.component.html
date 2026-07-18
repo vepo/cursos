@@ -1,0 +1,38 @@
+<div class="page-auth">
+  <div class="auth-card">
+    <div class="auth-card__header">
+      <mat-icon fontIcon="login" aria-hidden="true"></mat-icon>
+      <h1>Entrar</h1>
+      <p>Acesse com sua conta Passport</p>
+    </div>
+    <form class="auth-card__body" (ngSubmit)="login()">
+      <mat-form-field appearance="outline">
+        <mat-label>E-mail</mat-label>
+        <input matInput [(ngModel)]="email" name="email" required autocomplete="email" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Senha</mat-label>
+        <input
+          matInput
+          name="password"
+          [(ngModel)]="password"
+          [type]="hide() ? 'password' : 'text'"
+          required
+          autocomplete="current-password"
+        />
+        <button type="button" mat-icon-button matSuffix (click)="clickEvent($event)" aria-label="Mostrar senha">
+          <mat-icon>{{ hide() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        </button>
+      </mat-form-field>
+      @if (error) {
+        <div class="error" role="alert">{{ error }}</div>
+      }
+      <div class="form-actions">
+        <button matButton="filled" type="submit">
+          <mat-icon fontIcon="login" aria-hidden="true"></mat-icon>
+          <span>Entrar</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

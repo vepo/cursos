@@ -1,0 +1,67 @@
+---
+description: Pillar 2 — tiered test execution, impact map, failure workflow
+alwaysApply: true
+---
+
+# Testing
+
+Run the **smallest scope that catches your regression** after substantive edits. Full gate: `mvn verify` once before marking done — see [cursos-quality.mdc](cursos-quality.mdc).
+
+**Session end:** never stop with failing tests in your diff — run at least the affected test class, then `mvn verify` before handing off ([development-process.mdc](development-process.mdc) § Working code invariant).
+
+## Tiered ladder
+
+| When | Command |
+|------|---------|
+| Trivial / compile-only edit | Skip until next substantive change |
+| One backend package edited | Single test class or `mvn test -Dtest=ClassName` |
+| REST endpoint changed | Related `*EndpointTest` + `ArchitectureTest` if DTOs changed |
+| Angular component/service changed | `cd src/main/webui && npm run build` then `npm test -- --include='**/affected.spec.ts'` |
+| Task done (backend) | `mvn verify` |
+| Task done (full-stack) | `mvn verify` + `npm run build` + Angular tests (CI runs both) |
+
+```bash
+# All backend tests
+mvn test
+
+# Single test
+mvn test -Dtest=TicketEndpointTest#methodName
+
+# Architecture rules
+mvn test -Dtest=ArchitectureTest
+
+# Frontend (headless)
+cd src/main/webui && npm run build
+cd src/main/webui && npm test -- --no-watch --browsers=ChromeHeadless
+
+# Dev mode (manual)
+mvn quarkus:dev
+```
+
+## Impact map
+
+| You changed | Run |
+|-------------|-----|
+| `ticket/*` | `TicketEndpointTest`, `TicketHistoryServiceTest` |
+| `auth/*`, `user/*` | `AuthenticationEndpointTest`, `UserEndpointTest` |
+| `project/*` | `ProjectEndpointTest` |
+| `workflow/*` | `WorkflowEndpointTest` |
+| `*Request`/`*Response` records | `ArchitectureTest` + affected endpoint tests |
+| Angular service | Matching `*.service.spec.ts` |
+| Angular component | Matching `*.component.spec.ts` |
+
+Detail: [cursos-tests.mdc](cursos-tests.mdc).
+
+TDD development guidance: [cursos-model.mdc](cursos-model.mdc) § TDD.
+
+## When tests fail
+
+1. Re-run smallest repro — [cursos-test-failure-diagnosis.mdc](cursos-test-failure-diagnosis.mdc).
+2. Do not loop full `mvn verify` per fix.
+3. After green: one report under `reports/` per that rule.
+
+## Infra to reuse
+
+- `Given` builder in `src/test/java/dev/vepo/cursos/Given.java` for seed users, projects, tickets.
+- REST Assured with `@QuarkusTest` — not ad-hoc HTTP clients in tests.
+- No `Thread.sleep()` — use Awaitility if async timing is needed.

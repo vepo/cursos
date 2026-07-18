@@ -1,0 +1,49 @@
+---
+description: Core Cursos conventions (Quarkus REST + Angular SPA)
+alwaysApply: true
+---
+
+# Cursos — core rules
+
+Follow [ARCHITECTURE.md](../../ARCHITECTURE.md) and existing code in the same package.
+
+## Stack
+
+- Quarkus REST + Hibernate ORM + PostgreSQL + Flyway.
+- Angular SPA via Quinoa (`src/main/webui/`).
+- **Passport JWT** (SmallRye JWT validates Passport-issued tokens); API base path `/api`.
+- Cursos dev port **8083**; Passport **8080**.
+
+## Endpoints
+
+- `@ApplicationScoped` + `@Path`; suffix `*Endpoint`.
+- Constructor injection for repositories and services.
+- HTTP body types: Java `record`, suffix `Request` / `Response` — [cursos-http-contract.mdc](cursos-http-contract.mdc).
+- Response mapping: static `load()` factory on `*Response` records.
+- Security: `@DenyAll` on class + `@Authenticated` or `@RolesAllowed` on methods; teacher/student checks in services.
+
+## Data access
+
+- Repositories: `EntityManager` directly; `Optional` for single results; `@Transactional` on mutating methods — [cursos-jpa.mdc](cursos-jpa.mdc).
+- Domain logic: `@ApplicationScoped` `*Service` (e.g. `CourseService`, `EnrollmentService`, `ProgressService`, `MailerService`).
+
+## Frontend
+
+- Services in `src/main/webui/src/app/services/` — HTTP calls to `/api`.
+- Components by feature folder under `components/`.
+- Auth: Passport login → JWT in `auth.interceptor.ts` Bearer header.
+
+## Never
+
+- `System.out.println` — use SLF4J.
+- Raw `VO`/`DTO` suffix on HTTP types.
+- Hardcode new API paths in multiple Angular files — centralize in services.
+- Implement local password login — identity lives in Passport.
+
+## When adding a feature
+
+[development-process.mdc](development-process.mdc) — feature analysis → architecture design → task break → **explicit task approval** → TDD. Then ARCHITECTURE.md §13 — domain spec → package → tests → endpoint → Angular service/component → feature catalog.
+
+## When fixing a test
+
+Understand failure first; fix production code or test data via `Given`. Do not weaken assertions.

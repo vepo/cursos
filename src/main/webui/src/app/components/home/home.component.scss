@@ -1,0 +1,28 @@
+.spacer { flex: 1; }
+.user { margin-right: 1rem; }
+.catalog {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+article {
+  border: 1px solid #d7dde5;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fff;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.5rem 0; }
+.meta { display: block; color: #5b6573; margin-bottom: 0.75rem; }
+.empty { color: #5b6573; }
+section { margin-bottom: 2rem; }

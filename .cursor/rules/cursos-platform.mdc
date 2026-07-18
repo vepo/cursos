@@ -1,0 +1,48 @@
+---
+description: Pillar 4 — Java 21, Quarkus, Angular, approved libraries
+alwaysApply: true
+---
+
+# Platform usage
+
+## Stack boundaries
+
+| Layer | Technology | Location |
+|-------|------------|----------|
+| Backend | Java 21, Quarkus 3.30 | `src/main/java/dev/vepo/cursos/` |
+| Frontend | Angular 20, TypeScript | `src/main/webui/` |
+| Database | PostgreSQL + Flyway | `src/main/resources/db/migration/` |
+| SPA integration | Quarkus Quinoa | `application.properties` `quarkus.quinoa.*` |
+| Build | Maven (root), npm (webui) | `pom.xml`, `src/main/webui/package.json` |
+
+## Approved libraries
+
+- **Backend:** Jakarta EE (REST, CDI, Persistence, Validation), SmallRye JWT/OpenAPI, Quarkus Mailer, Hibernate ORM, REST Assured (tests), ArchUnit (tests).
+- **Frontend:** Angular Material, Chart.js/ng2-charts, `@jsverse/transloco` 8.4.x for reactive runtime PT/EN catalogs, standard Angular CLI toolchain.
+- **Logging:** SLF4J only in Java — never `System.out`.
+
+## Local development
+
+```bash
+mvn quarkus:dev          # Backend + Quinoa dev server (Angular on :4200)
+mvn test                 # Backend tests
+mvn formatter:format     # Java formatting
+```
+
+## CI alignment
+
+- [`.github/workflows/build.yml`](../../.github/workflows/build.yml) — Sonar: Angular tests + `mvn verify`.
+- [`.github/workflows/maven.yml`](../../.github/workflows/maven.yml) — `mvn package`.
+
+## Never
+
+- Add Python or unrelated runtimes for repo tooling.
+- Change JWT key paths without updating `%dev` and test config.
+- Use `VO` or `DTO` suffix on HTTP types — use `Request` / `Response`.
+- Bypass Flyway for schema changes — update SQL per [cursos-flyway.mdc](cursos-flyway.mdc).
+- Commit secrets from `application.properties` dev mailer block to production config.
+- Reintroduce locale-prefixed routes or locale-specific Angular builds — UI locale changes at runtime on canonical routes.
+
+## Package naming
+
+Root package: `dev.vepo.cursos`. Maven artifact: `cursos`. Product name: **Cursos**.

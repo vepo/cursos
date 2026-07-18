@@ -1,0 +1,53 @@
+---
+description: Domain Model Conventions - Ensure domain model usage in code and tests
+globs:
+  - 'src/main/java/**/*.java'
+  - 'src/main/webui/**/*.ts'
+  - 'src/main/webui/**/*.html'
+  - 'src/test/**/*.java'
+alwaysApply: true
+---
+
+# Ensure Domain Model Usage on Code
+
+## Domain Specification Location
+
+The domain specification MUST reside in `docs/domain-specification.md`.  
+This specification MUST contain a dedicated section titled **"Ubiquitous Language"** that defines all domain terms, their meanings, and their relationships.
+
+## Pre-Change Checklist (Before Any Code Change)
+
+Before implementing any change, you MUST complete [development-process.mdc](development-process.mdc) phases 1–4:
+
+1. **Feature analysis** — `feature/<feature-slug>.md` with impact and changelog ([change-request-analysis.mdc](change-request-analysis.mdc)); resolve **feature questions (FQ*n***)**.
+2. **Architecture design** — **Architecture** section and **architecture questions (AQ*n***)** ([architecture-design.mdc](architecture-design.mdc)); mandatory for every feature change.
+3. **Task break** — numbered tasks and test coverage plan in the changelog entry (`status: tasks-ready`).
+4. **Development approved** — user explicitly approves **task IDs** in chat and feature doc (`status: approved`). Answering **FQ*n*** or **AQ*n*** is not approval.
+5. **Open questions** — two kinds: **FQ*n*** (product scope, phase 1) and **AQ*n*** (technical design, phase 2); status `open` | `answered` | `not valid`; cite in tasks and changelog. **When the user answers FQ/AQ:** mandatory **impact review** per [development-process.mdc](development-process.mdc). Legacy **Q*n*** = **FQ*n*** until docs are updated.
+6. **Read the domain specification** completely, especially the Ubiquitous Language section.
+7. **Question the change against the domain**:
+   - Does this change affect the domain (new entities, events, or business rules)?
+   - Does the domain allow the intended implementation?
+   - Do we need to extend the domain specification?
+   - Is there a new domain concept introduced by the change?
+   - Are any UI elements implied by the change? Document them in the ubiquitous language.
+
+**Do NOT write any code or test until phases 1–4 are complete** (feature analysis, architecture design, task break, explicit task approval). Answering open questions does not complete phase 4. If the answer changes the domain, update the specification first. Phase 5 uses TDD — see [cursos-model.mdc](cursos-model.mdc) § TDD.
+
+## Coding Rules
+
+Every identifier (class, method, variable, parameter) MUST reflect the domain's ubiquitous language — `Ticket`, `Move`, `Subscriber`, not `ItemData`, `doUpdate`, `stateFlag`.
+
+## Testing Rules
+
+Test code MUST use domain language. Method names: `shouldMoveTicketWhenTransitionIsValid()`.
+
+## Post-Change Update Rule
+
+After ANY change, re-evaluate the domain specification:
+
+- New concepts → add to Ubiquitous Language.
+- Modified rules → update invariants section.
+- New UI labels → document in feature catalog and domain spec.
+
+**If the domain specification is out of sync, fix it before committing.**

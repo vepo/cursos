@@ -1,0 +1,72 @@
+---
+description: Pillar 1 — domain model, architecture, packages, TDD vocabulary
+alwaysApply: true
+---
+
+# Building the model
+
+Canonical references: [ARCHITECTURE.md](../../ARCHITECTURE.md), [docs/domain-specification.md](../../docs/domain-specification.md).
+
+## Before any change
+
+1. **Development process** — follow [development-process.mdc](development-process.mdc): feature analysis → architecture design → task break → user approval → TDD. **No `src/main` or `src/test` changes before approval.**
+2. **Feature analysis** — create or update `feature/<feature-slug>.md` per [change-request-analysis.mdc](change-request-analysis.mdc); maintain **Wireframe**, **Feature checklist**, and **Architecture** ([architecture-design.mdc](architecture-design.mdc)).
+3. Read **domain specification** (Ubiquitous Language) for ticket, workflow, project, or notification work.
+4. Read **ARCHITECTURE.md** §5 (package layout), §11 (naming), §12 (feature workflow).
+5. Follow patterns in the package you edit.
+
+## Domain vocabulary in code and tests
+
+- Use domain terms: `Ticket`, `Workflow`, `Transition`, `Subscriber`, `Identifier` — not `Data`, `ItemDTO`, `stateFlag`.
+- Test names: `shouldMoveTicketWhenTransitionIsValid()` — full narrative in [cursos-tests.mdc](cursos-tests.mdc).
+
+## Package placement
+
+| Change | Package |
+|--------|---------|
+| Auth, JWT, login | `auth` |
+| Users, roles | `user` |
+| Projects | `project` |
+| Workflows, statuses, transitions | `workflow` |
+| Tickets, comments, history | `ticket`, `ticket.*` |
+| Categories | `categories` |
+| SSE notifications | `notifications` |
+| Dashboard widgets | `dashboards` |
+| Email | `mailer` |
+| Cross-cutting HTTP/errors | `infra` |
+
+Bounded context rules: [cursos-bounded-contexts.mdc](cursos-bounded-contexts.mdc).
+
+## After model-affecting changes
+
+| Trigger | Update |
+|---------|--------|
+| New domain terms or invariants | [domain-specification.md](../../docs/domain-specification.md) |
+| New/changed UI route or flow | [feature-catalog.md](../../docs/feature-catalog.md) |
+| New/changed user-facing capability | [README.md](../../README.md) § Features — [readme.mdc](readme.mdc) |
+| Structure, API surface, known gaps | [ARCHITECTURE.md](../../ARCHITECTURE.md) §13 |
+| User-facing docs | [documentation.mdc](documentation.mdc) |
+
+## Feature workflow
+
+[development-process.mdc](development-process.mdc): feature analysis → architecture design → task break → **explicit task approval** → TDD (per approved task) → tiered runs ([cursos-testing.mdc](cursos-testing.mdc)) → **Feature checklist recheck** → `mvn verify` ([cursos-quality.mdc](cursos-quality.mdc)).
+
+**Answering FQ/AQ is not approval.** After open questions are resolved, stop and wait for the user to approve task IDs before editing `src/main` or `src/test`.
+
+## TDD — mandatory in phase 5
+
+**Required** for every approved task. Write a failing test before `src/main` changes. The changelog **Test coverage** checklist must be complete and the **Feature checklist** rechecked before marking the entry `done` — see [development-process.mdc](development-process.mdc) § Phase 5.
+
+Delegate to [`.cursor/agents/`](../agents/) or invoke by name (`tdd-red`, `tdd-green`, `tdd-refactor`).
+
+| Phase | Subagent | Goal | Allowed | Forbidden |
+|-------|----------|------|---------|-----------|
+| **Red** | `tdd-red` | **Create** a failing test | New/updated test; domain-named methods | Production `src/main` changes |
+| **Green** | `tdd-green` | Minimal code to pass | Smallest `src/main` diff | New tests; refactors; scope creep |
+| **Refactor** | `tdd-refactor` | Improve design, tests green | Rename, extract, dedupe | Behaviour change |
+
+**Cycle:** Red (must fail) → Green (must pass) → Refactor → `mvn test` → repeat.
+
+**Session end:** every TDD cycle in progress must reach **Green** (or be reverted) before stopping — see [development-process.mdc](development-process.mdc) § Working code invariant.
+
+Test layout: [cursos-tests.mdc](cursos-tests.mdc). Running tests: [cursos-testing.mdc](cursos-testing.mdc).

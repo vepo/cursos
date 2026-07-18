@@ -1,0 +1,60 @@
+---
+description: Layered architecture — Endpoint, Service, Repository responsibilities
+alwaysApply: true
+---
+
+# Layered architecture
+
+Follow [ARCHITECTURE.md](../../ARCHITECTURE.md) §6. Dependencies flow **downward only**:
+
+```
+*Endpoint  →  *Service (when needed)  →  *Repository  →  database
+```
+
+## *Endpoint — HTTP boundary
+
+- **One HTTP operation per class** in `{context}.{action}` subpackage (e.g. `ticket.create.CreateTicketEndpoint`).
+- `@ApplicationScoped` + `@Path`; class-level `@DenyAll`, method-level `@RolesAllowed`.
+- `@Operation(operationId = "...")` + `@Tag(name = "...")` for OpenAPI codegen.
+- Map path/query/body to domain calls; return `*Response` records.
+- **Must** inject `*Service` — no business logic, no `@Transactional` in endpoints.
+
+## *Service — business logic
+
+- `@ApplicationScoped`; name `XxxService`.
+- Orchestrate repositories, apply domain rules, fire events.
+- **Inject** `*Repository`; **never** `EntityManager` directly.
+- **Never** depend on `*Endpoint` or JAX-RS types.
+
+## *Repository — persistence
+
+- One per entity; `@ApplicationScoped`; name `XxxRepository`.
+- `EntityManager` **only** here; queries and persistence only — **no** business rules or HTTP concerns.
+- **Never** inject `*Service` or `*Endpoint`.
+
+## When adding a feature
+
+Complete [development-process.mdc](development-process.mdc) phases 1–4 before coding. Phase 5 (TDD), in order:
+
+1. Entity (if new table) + Flyway baseline change per [cursos-flyway.mdc](cursos-flyway.mdc).
+2. `XxxRepository`.
+3. `XxxService` for non-trivial logic.
+4. One `*Endpoint` class per HTTP operation under `{context}.{action}/`.
+5. Angular facade + component if user-facing; run `npm run generate:api` after API changes.
+
+## Violations — refactor toward layers
+
+```java
+// ❌ Endpoint with audit logging inline
+@POST
+public TicketResponse create(CreateTicketRequest request) {
+    ticketRepository.persist(ticket);
+    historyRepository.persist(new TicketHistory(...));
+}
+
+// ✅ Endpoint delegates to service
+@POST
+public TicketResponse create(CreateTicketRequest request) {
+    return ticketHistoryService.createTicket(request);
+}
+```

@@ -1,0 +1,16 @@
+/target/
+/data/attachments/
+src/main/webui/src/app/generated/
+*.class
+*.log
+*.iml
+/.idea/
+/.vscode/
+
+.quinoa
+
+## Eclipse
+.project
+.settings
+.classpath
+**/pom.xml.versionsBackup
