@@ -6,6 +6,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 
+import { CourseImagesApi } from '../../generated/api/courseImages.service';
 import { CourseItemsApi } from '../../generated/api/courseItems.service';
 import { CoursesApi } from '../../generated/api/courses.service';
 import { DiscussionApi } from '../../generated/api/discussion.service';
@@ -16,6 +17,7 @@ import { CourseItemResponse } from '../../generated/model/courseItemResponse';
 import { StudyItemResponse } from '../../generated/model/studyItemResponse';
 import { StudyResponse } from '../../generated/model/studyResponse';
 import { AuthService } from '../../services/auth.service';
+import { ConfirmationService } from '../../services/confirmation.service';
 import {
   VISUAL_SHELL_LAYOUT,
   VISUAL_SHELL_TOKENS,
@@ -100,7 +102,18 @@ describe('CourseViewComponent study UI', () => {
   let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   function studyResponse(items: StudyItemResponse[] = studyTree): StudyResponse {
-    return { courseId, items };
+    const completedItems = items.filter(item => item.completed).length;
+    const totalItems = items.length;
+    const concluded = totalItems > 0 && completedItems === totalItems;
+    return {
+      courseId,
+      items,
+      completedItems,
+      totalItems,
+      percentComplete: totalItems === 0 ? 0 : (completedItems * 100) / totalItems,
+      concluded,
+      concludedAt: concluded ? '2026-07-19T12:00:00Z' : undefined
+    };
   }
 
   function configure(params: Record<string, string>): void {
@@ -108,7 +121,7 @@ describe('CourseViewComponent study UI', () => {
 
     paramMap$ = new BehaviorSubject(convertToParamMap(params));
     studyApi = jasmine.createSpyObj('StudyApi', ['getCourseStudy', 'getStudyItem']);
-    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress']);
+    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress', 'downloadCourseCertificate']);
     coursesApi = jasmine.createSpyObj('CoursesApi', ['findCourse']);
     const discussionApi = jasmine.createSpyObj('DiscussionApi', [
       'listComments',
@@ -117,6 +130,9 @@ describe('CourseViewComponent study UI', () => {
       'hideComment',
       'restoreComment'
     ]);
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(true));
+    confirmation.confirmOrTrue.and.returnValue(of(true));
     discussionApi.listComments.and.returnValue(of([]) as never);
 
     studyApi.getCourseStudy.and.returnValue(of(studyResponse()) as never);
@@ -127,6 +143,7 @@ describe('CourseViewComponent study UI', () => {
       return of(setupContent) as never;
     });
     progressApi.updateItemProgress.and.returnValue(of({ completed: true }) as never);
+    progressApi.downloadCourseCertificate.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })) as never);
     coursesApi.findCourse.and.returnValue(of({
       teaching: false,
       enrolled: true,
@@ -147,7 +164,9 @@ describe('CourseViewComponent study UI', () => {
         { provide: ProgressApi, useValue: progressApi },
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CourseItemsApi, useValue: jasmine.createSpyObj('CourseItemsApi', { createPlaybackTicket: of({ url: '/api/media/playback/1/1/1?expires=1&sig=x' }) }) },
+        { provide: CourseImagesApi, useValue: jasmine.createSpyObj('CourseImagesApi', { createImageTickets: of({ tickets: [] }) }) },
         { provide: DiscussionApi, useValue: discussionApi },
+        { provide: ConfirmationService, useValue: confirmation },
         { provide: AuthService, useValue: authServiceStub },
         {
           provide: ActivatedRoute,
@@ -213,10 +232,11 @@ describe('CourseViewComponent study UI', () => {
   }));
 
   it('shouldIndicateCompletedCurrentAndLockedAulasAndPreventLockedNavigation', fakeAsync(() => {
+    // Course root: no aula selected — accessible incomplete aula is not "current".
     configure({ courseId: String(courseId) });
 
     expect(aulaState(1)).toBe('completed');
-    expect(aulaState(2)).toBe('current');
+    expect(aulaState(2)).toBe('accessible');
     expect(aulaState(3)).toBe('locked');
     expect(aulaNode(3)?.getAttribute('aria-disabled')).toBe('true');
 
@@ -227,12 +247,16 @@ describe('CourseViewComponent study UI', () => {
     expect(studyApi.getStudyItem).not.toHaveBeenCalledWith(courseId, 3);
   }));
 
-  it('shouldSelectFirstAccessibleAulaOnCourseRouteAndSupportLessonRoute', fakeAsync(() => {
+  it('shouldShowOverviewOnCourseRouteAndOpenAulaOnLessonRoute', fakeAsync(() => {
     configure({ courseId: String(courseId) });
 
-    expect(studyApi.getStudyItem).toHaveBeenCalledWith(courseId, 2);
-    expect(selectedContent()?.textContent).toContain('Ambiente');
-    expect(aulaState(2)).toBe('current');
+    const summary = fixture.nativeElement.querySelector('[data-testid="course-summary"]');
+    expect(summary).not.toBeNull();
+    expect(summary?.textContent).toContain('Sobre o curso');
+    expect(summary?.textContent).toContain('Sobre o autor');
+    expect(selectedContent()).toBeNull();
+    expect(studyApi.getStudyItem).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.selectedAulaId).toBeNull();
 
     paramMap$.next(convertToParamMap({ courseId: String(courseId), itemId: '1' }));
     tick();
@@ -240,6 +264,7 @@ describe('CourseViewComponent study UI', () => {
 
     expect(studyApi.getStudyItem).toHaveBeenCalledWith(courseId, 1);
     expect(selectedContent()?.textContent).toContain('Boas-vindas');
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).toBeNull();
   }));
 
   it('shouldDisplayOnlySelectedAulaContent', fakeAsync(() => {
@@ -250,7 +275,56 @@ describe('CourseViewComponent study UI', () => {
     expect(content?.textContent).toContain('Ambiente');
     expect(content?.textContent).not.toContain('Boas-vindas');
     expect(fixture.nativeElement.querySelectorAll('[data-testid="aula-content"]').length).toBe(1);
-    expect(fixture.nativeElement.querySelectorAll('[data-testid="course-summary"] article').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).toBeNull();
+  }));
+
+  it('shouldShowCourseOverviewWithoutSelectingAulaOnCourseRoot', fakeAsync(() => {
+    configure({ courseId: String(courseId) });
+
+    const summary = fixture.nativeElement.querySelector('[data-testid="course-summary"]');
+    expect(summary).withContext('Course overview must be present on course root').not.toBeNull();
+    expect(summary?.textContent).toContain('Sobre o curso');
+    expect(summary?.textContent).toContain('Sobre o autor');
+    expect(selectedContent()).toBeNull();
+    expect(studyApi.getStudyItem).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.selectedAulaId).toBeNull();
+  }));
+
+  it('shouldHideCourseOverviewWhenViewingAula', fakeAsync(() => {
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).toBeNull();
+    expect(selectedContent()).withContext('Aula content must be present on lesson route').not.toBeNull();
+    expect(selectedContent()?.textContent).toContain('Ambiente');
+  }));
+
+  it('shouldReturnToOverviewViaVisaoGeralAndCourseTitle', fakeAsync(() => {
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    expect(selectedContent()).not.toBeNull();
+
+    const visaoGeral = fixture.nativeElement.querySelector('[data-testid="visao-geral"]') as HTMLElement | null;
+    expect(visaoGeral).withContext('Visão geral sidebar entry must be present').not.toBeNull();
+    expect(visaoGeral?.getAttribute('data-aula-id')).toBeNull();
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    visaoGeral?.click();
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId]);
+
+    const titleControl = fixture.nativeElement.querySelector(
+      '[data-testid="course-overview-title"]'
+    ) as HTMLElement | null;
+    expect(titleControl)
+      .withContext('Course title control data-testid="course-overview-title" must navigate to course root')
+      .not.toBeNull();
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    titleControl?.click();
+    fixture.detectChanges();
+
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId]);
   }));
 
   it('shouldRenderMarkdownAsSanitizedHtmlNotRawPre', fakeAsync(() => {
@@ -287,7 +361,12 @@ describe('CourseViewComponent study UI', () => {
         { provide: ProgressApi, useValue: progressApi },
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CourseItemsApi, useValue: jasmine.createSpyObj('CourseItemsApi', { createPlaybackTicket: of({ url: '/api/media/playback/1/1/1?expires=1&sig=x' }) }) },
+        { provide: CourseImagesApi, useValue: jasmine.createSpyObj('CourseImagesApi', { createImageTickets: of({ tickets: [] }) }) },
         { provide: DiscussionApi, useValue: discussionApi },
+        { provide: ConfirmationService, useValue: jasmine.createSpyObj('ConfirmationService', {
+          confirm: of(true),
+          confirmOrTrue: of(true)
+        }) },
         { provide: AuthService, useValue: authServiceStub },
         {
           provide: ActivatedRoute,
@@ -346,6 +425,326 @@ describe('CourseViewComponent study UI', () => {
     expect(studyApi.getCourseStudy).toHaveBeenCalledTimes(2);
     expect(aulaState(3)).not.toBe('locked');
     expect(aulaNode(3)?.getAttribute('aria-disabled')).not.toBe('true');
+  }));
+
+  function concluirAulaButton() {
+    return fixture.debugElement.query(By.css('[data-testid="concluir-aula"]'))
+      ?? fixture.debugElement.queryAll(By.css('button'))
+        .find(button => /concluir/i.test(button.nativeElement.textContent ?? ''));
+  }
+
+  const diContent: CourseItemResponse = {
+    id: 3,
+    courseId,
+    title: 'DI',
+    itemType: 'MARKDOWN',
+    sortOrder: 3,
+    markdownBody: '## Injeção de dependências'
+  };
+
+  it('shouldAdvanceToNextAulaAfterSuccessfulCompletion', fakeAsync(() => {
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    const afterCompleteTree = studyResponse([
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true }
+    ]);
+    studyApi.getCourseStudy.and.returnValue(of(afterCompleteTree) as never);
+    studyApi.getStudyItem.and.callFake((_cId: number, itemId: number) => {
+      if (itemId === 1) {
+        return of(introContent) as never;
+      }
+      if (itemId === 3) {
+        return of(diContent) as never;
+      }
+      return of(setupContent) as never;
+    });
+
+    const concluirButton = concluirAulaButton();
+    expect(concluirButton).withContext('Concluir aula action must be present').toBeTruthy();
+    if (!concluirButton) {
+      return;
+    }
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    concluirButton.nativeElement.click();
+    tick();
+    fixture.detectChanges();
+
+    expect(progressApi.updateItemProgress).toHaveBeenCalledWith(
+      courseId,
+      2,
+      jasmine.objectContaining({ completed: true })
+    );
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId, 'lessons', 3]);
+    expect(fixture.componentInstance.selectedAulaId).toBe(3);
+    expect(aulaState(3)).toBe('current');
+  }));
+
+  it('shouldRemainOnFinalAulaAfterCompletingLastItem', fakeAsync(() => {
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    studyApi.getStudyItem.and.callFake((_cId: number, itemId: number) => {
+      if (itemId === 1) {
+        return of(introContent) as never;
+      }
+      if (itemId === 3) {
+        return of(diContent) as never;
+      }
+      return of(setupContent) as never;
+    });
+
+    const afterPenultimateComplete = studyResponse([
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true }
+    ]);
+    studyApi.getCourseStudy.and.returnValue(of(afterPenultimateComplete) as never);
+
+    let concluirButton = concluirAulaButton();
+    expect(concluirButton).withContext('Concluir aula action must be present').toBeTruthy();
+    if (!concluirButton) {
+      return;
+    }
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    concluirButton.nativeElement.click();
+    tick();
+    fixture.detectChanges();
+
+    expect(progressApi.updateItemProgress).toHaveBeenCalledWith(
+      courseId,
+      2,
+      jasmine.objectContaining({ completed: true })
+    );
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId, 'lessons', 3]);
+    expect(fixture.componentInstance.selectedAulaId).toBe(3);
+
+    const afterFinalComplete = studyResponse([
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
+      { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true }
+    ]);
+    studyApi.getCourseStudy.and.returnValue(of(afterFinalComplete) as never);
+
+    concluirButton = concluirAulaButton();
+    expect(concluirButton).withContext('Concluir aula must remain available on final aula').toBeTruthy();
+    if (!concluirButton) {
+      return;
+    }
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    progressApi.updateItemProgress.calls.reset();
+    concluirButton.nativeElement.click();
+    tick();
+    fixture.detectChanges();
+
+    expect(progressApi.updateItemProgress).toHaveBeenCalledWith(
+      courseId,
+      3,
+      jasmine.objectContaining({ completed: true })
+    );
+    expect(router.navigate).not.toHaveBeenCalledWith(['/courses', courseId, 'lessons', 4]);
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.selectedAulaId).toBe(3);
+    expect(fixture.nativeElement.querySelector('[data-testid="course-finish"]'))
+      .withContext('Finish screen must replace final aula content at 100%')
+      .toBeTruthy();
+    expect(fixture.nativeElement.querySelector('[data-testid="download-certificate"]')).toBeTruthy();
+  }));
+
+  it('shouldShowSidebarProgressPercentage', fakeAsync(() => {
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    const progress = fixture.nativeElement.querySelector('[data-testid="study-progress"]') as HTMLElement | null;
+    expect(progress).withContext('Sidebar progress must be visible').toBeTruthy();
+    expect(progress?.textContent).toContain('1/3');
+    expect(progress?.textContent).toMatch(/33/);
+  }));
+
+  it('shouldRollbackCompletedAulaAfterConfirmation', fakeAsync(() => {
+    const completedTree = studyResponse([
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true }
+    ]);
+    TestBed.resetTestingModule();
+    paramMap$ = new BehaviorSubject(convertToParamMap({ courseId: String(courseId), itemId: '2' }));
+    studyApi = jasmine.createSpyObj('StudyApi', ['getCourseStudy', 'getStudyItem']);
+    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress', 'downloadCourseCertificate']);
+    coursesApi = jasmine.createSpyObj('CoursesApi', ['findCourse']);
+    const discussionApi = jasmine.createSpyObj('DiscussionApi', [
+      'listComments', 'createComment', 'upvoteComment', 'hideComment', 'restoreComment'
+    ]);
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(true));
+    confirmation.confirmOrTrue.and.returnValue(of(true));
+    discussionApi.listComments.and.returnValue(of([]) as never);
+    studyApi.getCourseStudy.and.returnValue(of(completedTree) as never);
+    studyApi.getStudyItem.and.returnValue(of(setupContent) as never);
+    progressApi.updateItemProgress.and.returnValue(of({ completed: false }) as never);
+    progressApi.downloadCourseCertificate.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })) as never);
+    coursesApi.findCourse.and.returnValue(of({
+      teaching: false,
+      enrolled: true,
+      course: { id: courseId, title: 'Quarkus', summary: 'Curso completo', teacherName: 'Ana', teacherDescription: 'Instrutora backend' },
+      items: [introContent, setupContent]
+    }) as never);
+
+    TestBed.configureTestingModule({
+      imports: [CourseViewComponent, NoopAnimationsModule],
+      providers: [
+        provideRouter([
+          { path: 'courses/:courseId', component: CourseViewComponent },
+          { path: 'courses/:courseId/lessons/:itemId', component: CourseViewComponent }
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: StudyApi, useValue: studyApi },
+        { provide: ProgressApi, useValue: progressApi },
+        { provide: CoursesApi, useValue: coursesApi },
+        { provide: CourseItemsApi, useValue: jasmine.createSpyObj('CourseItemsApi', { createPlaybackTicket: of({ url: '/api/media/playback/1/1/1?expires=1&sig=x' }) }) },
+        { provide: CourseImagesApi, useValue: jasmine.createSpyObj('CourseImagesApi', { createImageTickets: of({ tickets: [] }) }) },
+        { provide: DiscussionApi, useValue: discussionApi },
+        { provide: ConfirmationService, useValue: confirmation },
+        { provide: AuthService, useValue: authServiceStub },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ courseId: String(courseId), itemId: '2' }) },
+            paramMap: paramMap$.asObservable()
+          }
+        }
+      ]
+    });
+    router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    fixture = TestBed.createComponent(CourseViewComponent);
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
+
+    const rollbackButton = fixture.debugElement.query(By.css('[data-testid="desfazer-progresso"]'));
+    expect(rollbackButton).withContext('Desfazer progresso must replace Concluir on completed aula').toBeTruthy();
+    if (!rollbackButton) {
+      return;
+    }
+
+    studyApi.getCourseStudy.and.returnValue(of(studyResponse([
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
+    ])) as never);
+
+    rollbackButton.nativeElement.click();
+    tick();
+    fixture.detectChanges();
+
+    expect(progressApi.updateItemProgress).toHaveBeenCalledWith(
+      courseId,
+      2,
+      jasmine.objectContaining({ completed: false })
+    );
+  }));
+
+  it('shouldDownloadCertificateFromFinishScreen', fakeAsync(() => {
+    const concludedTree = studyResponse([
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
+      { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true }
+    ]);
+    TestBed.resetTestingModule();
+    paramMap$ = new BehaviorSubject(convertToParamMap({ courseId: String(courseId), itemId: '3' }));
+    studyApi = jasmine.createSpyObj('StudyApi', ['getCourseStudy', 'getStudyItem']);
+    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress', 'downloadCourseCertificate']);
+    coursesApi = jasmine.createSpyObj('CoursesApi', ['findCourse']);
+    const discussionApi = jasmine.createSpyObj('DiscussionApi', [
+      'listComments', 'createComment', 'upvoteComment', 'hideComment', 'restoreComment'
+    ]);
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(true));
+    confirmation.confirmOrTrue.and.returnValue(of(true));
+    discussionApi.listComments.and.returnValue(of([]) as never);
+    studyApi.getCourseStudy.and.returnValue(of(concludedTree) as never);
+    studyApi.getStudyItem.and.returnValue(of(diContent) as never);
+    progressApi.updateItemProgress.and.returnValue(of({ completed: true }) as never);
+    progressApi.downloadCourseCertificate.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })) as never);
+    coursesApi.findCourse.and.returnValue(of({
+      teaching: false,
+      enrolled: true,
+      course: { id: courseId, title: 'Quarkus', summary: 'Curso completo', teacherName: 'Ana', teacherDescription: 'Instrutora backend' },
+      items: [introContent, setupContent, diContent]
+    }) as never);
+
+    TestBed.configureTestingModule({
+      imports: [CourseViewComponent, NoopAnimationsModule],
+      providers: [
+        provideRouter([
+          { path: 'courses/:courseId', component: CourseViewComponent },
+          { path: 'courses/:courseId/lessons/:itemId', component: CourseViewComponent }
+        ]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: StudyApi, useValue: studyApi },
+        { provide: ProgressApi, useValue: progressApi },
+        { provide: CoursesApi, useValue: coursesApi },
+        { provide: CourseItemsApi, useValue: jasmine.createSpyObj('CourseItemsApi', { createPlaybackTicket: of({ url: '/api/media/playback/1/1/1?expires=1&sig=x' }) }) },
+        { provide: CourseImagesApi, useValue: jasmine.createSpyObj('CourseImagesApi', { createImageTickets: of({ tickets: [] }) }) },
+        { provide: DiscussionApi, useValue: discussionApi },
+        { provide: ConfirmationService, useValue: confirmation },
+        { provide: AuthService, useValue: authServiceStub },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ courseId: String(courseId), itemId: '3' }) },
+            paramMap: paramMap$.asObservable()
+          }
+        }
+      ]
+    });
+    router = TestBed.inject(Router);
+    spyOn(router, 'navigate').and.resolveTo(true);
+    fixture = TestBed.createComponent(CourseViewComponent);
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
+
+    const downloadButton = fixture.nativeElement.querySelector('[data-testid="download-certificate"]') as HTMLButtonElement | null;
+    expect(downloadButton).withContext('Certificate download must be on finish screen').toBeTruthy();
+    downloadButton?.click();
+    tick();
+
+    expect(progressApi.downloadCourseCertificate).toHaveBeenCalledWith(courseId);
+  }));
+
+  it('shouldNotNavigateAwayWhenProgressUpdateFails', fakeAsync(() => {
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    progressApi.updateItemProgress.and.returnValue(
+      throwError(() => ({ status: 500, message: 'progress update failed' })) as never
+    );
+
+    const concluirButton = concluirAulaButton();
+    expect(concluirButton).withContext('Concluir aula action must be present').toBeTruthy();
+    if (!concluirButton) {
+      return;
+    }
+
+    (router.navigate as jasmine.Spy).calls.reset();
+    concluirButton.nativeElement.click();
+    tick();
+    fixture.detectChanges();
+
+    expect(progressApi.updateItemProgress).toHaveBeenCalledWith(
+      courseId,
+      2,
+      jasmine.objectContaining({ completed: true })
+    );
+    expect(router.navigate).not.toHaveBeenCalledWith(['/courses', courseId, 'lessons', 3]);
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.selectedAulaId).toBe(2);
+    expect(aulaState(2)).toBe('current');
   }));
 });
 
@@ -442,7 +841,18 @@ describe('CourseViewComponent aula discussion (T16)', () => {
   let paramMap$: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   function studyResponse(items: StudyItemResponse[] = studyTree): StudyResponse {
-    return { courseId, items };
+    const completedItems = items.filter(item => item.completed).length;
+    const totalItems = items.length;
+    const concluded = totalItems > 0 && completedItems === totalItems;
+    return {
+      courseId,
+      items,
+      completedItems,
+      totalItems,
+      percentComplete: totalItems === 0 ? 0 : (completedItems * 100) / totalItems,
+      concluded,
+      concludedAt: concluded ? '2026-07-19T12:00:00Z' : undefined
+    };
   }
 
   function configure(options: {
@@ -462,7 +872,7 @@ describe('CourseViewComponent aula discussion (T16)', () => {
 
     paramMap$ = new BehaviorSubject(convertToParamMap(options.params));
     studyApi = jasmine.createSpyObj('StudyApi', ['getCourseStudy', 'getStudyItem']);
-    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress']);
+    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress', 'downloadCourseCertificate']);
     coursesApi = jasmine.createSpyObj('CoursesApi', ['findCourse']);
     discussionApi = jasmine.createSpyObj('DiscussionApi', [
       'listComments',
@@ -471,6 +881,9 @@ describe('CourseViewComponent aula discussion (T16)', () => {
       'hideComment',
       'restoreComment'
     ]);
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(true));
+    confirmation.confirmOrTrue.and.returnValue(of(true));
 
     studyApi.getCourseStudy.and.returnValue(of(studyResponse()) as never);
     studyApi.getStudyItem.and.callFake((_cId: number, itemId: number) => {
@@ -480,6 +893,7 @@ describe('CourseViewComponent aula discussion (T16)', () => {
       return of(setupContent) as never;
     });
     progressApi.updateItemProgress.and.returnValue(of({ completed: true }) as never);
+    progressApi.downloadCourseCertificate.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })) as never);
     coursesApi.findCourse.and.returnValue(of({
       teaching,
       enrolled,
@@ -531,7 +945,9 @@ describe('CourseViewComponent aula discussion (T16)', () => {
         { provide: ProgressApi, useValue: progressApi },
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CourseItemsApi, useValue: jasmine.createSpyObj('CourseItemsApi', { createPlaybackTicket: of({ url: '/api/media/playback/1/1/1?expires=1&sig=x' }) }) },
+        { provide: CourseImagesApi, useValue: jasmine.createSpyObj('CourseImagesApi', { createImageTickets: of({ tickets: [] }) }) },
         { provide: DiscussionApi, useValue: discussionApi },
+        { provide: ConfirmationService, useValue: confirmation },
         { provide: AuthService, useValue: authServiceStub },
         {
           provide: ActivatedRoute,
@@ -850,7 +1266,7 @@ describe('CourseViewComponent visual shell (T24)', () => {
 
     paramMap$ = new BehaviorSubject(convertToParamMap(params));
     studyApi = jasmine.createSpyObj('StudyApi', ['getCourseStudy', 'getStudyItem']);
-    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress']);
+    progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress', 'downloadCourseCertificate']);
     coursesApi = jasmine.createSpyObj('CoursesApi', ['findCourse']);
     const discussionApi = jasmine.createSpyObj('DiscussionApi', [
       'listComments',
@@ -859,9 +1275,19 @@ describe('CourseViewComponent visual shell (T24)', () => {
       'hideComment',
       'restoreComment'
     ]);
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(true));
+    confirmation.confirmOrTrue.and.returnValue(of(true));
     discussionApi.listComments.and.returnValue(of([]) as never);
 
-    studyApi.getCourseStudy.and.returnValue(of({ courseId, items: studyTree }) as never);
+    studyApi.getCourseStudy.and.returnValue(of({
+      courseId,
+      items: studyTree,
+      completedItems: 1,
+      totalItems: 3,
+      percentComplete: 33.333,
+      concluded: false
+    }) as never);
     studyApi.getStudyItem.and.callFake((_cId: number, itemId: number) => {
       if (itemId === 1) {
         return of(introContent) as never;
@@ -869,6 +1295,7 @@ describe('CourseViewComponent visual shell (T24)', () => {
       return of(setupContent) as never;
     });
     progressApi.updateItemProgress.and.returnValue(of({ completed: true }) as never);
+    progressApi.downloadCourseCertificate.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })) as never);
     coursesApi.findCourse.and.returnValue(of({
       teaching,
       enrolled,
@@ -889,7 +1316,9 @@ describe('CourseViewComponent visual shell (T24)', () => {
         { provide: ProgressApi, useValue: progressApi },
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CourseItemsApi, useValue: jasmine.createSpyObj('CourseItemsApi', { createPlaybackTicket: of({ url: '/api/media/playback/1/1/1?expires=1&sig=x' }) }) },
+        { provide: CourseImagesApi, useValue: jasmine.createSpyObj('CourseImagesApi', { createImageTickets: of({ tickets: [] }) }) },
         { provide: DiscussionApi, useValue: discussionApi },
+        { provide: ConfirmationService, useValue: confirmation },
         { provide: AuthService, useValue: authServiceStub },
         {
           provide: ActivatedRoute,
@@ -928,6 +1357,23 @@ describe('CourseViewComponent visual shell (T24)', () => {
 
   function aulaNode(itemId: number): HTMLElement | null {
     return fixture.nativeElement.querySelector(`[data-aula-id="${itemId}"]`);
+  }
+
+  function aulaStateIcon(itemId: number): HTMLElement | null {
+    const node = aulaNode(itemId);
+    if (!node) {
+      return null;
+    }
+    return node.querySelector('mat-icon[aria-hidden="true"], .mat-icon[aria-hidden="true"]');
+  }
+
+  function iconFontName(icon: HTMLElement): string {
+    return (
+      icon.getAttribute('data-mat-icon-name')
+      ?? icon.getAttribute('fontIcon')
+      ?? icon.getAttribute('ng-reflect-font-icon')
+      ?? (icon.textContent ?? '').replace(/\s+/g, ' ').trim()
+    );
   }
 
   function aulasAccessControl(): HTMLElement | null {
@@ -1033,7 +1479,8 @@ describe('CourseViewComponent visual shell (T24)', () => {
   }));
 
   it('shouldStyleCompletedCurrentAndLockedAulasWithAccentAndMutedTokens', fakeAsync(() => {
-    configure({ courseId: String(courseId) });
+    // Lesson route so aula 2 is current (course root no longer auto-selects).
+    configure({ courseId: String(courseId), itemId: '2' });
 
     const completed = aulaNode(1);
     const current = aulaNode(2);
@@ -1063,6 +1510,100 @@ describe('CourseViewComponent visual shell (T24)', () => {
     locked?.click();
     fixture.detectChanges();
     expect(router.navigate).not.toHaveBeenCalledWith(['/courses', courseId, 'lessons', 3]);
+  }));
+
+  it('shouldRenderStateIconForCompletedCurrentAccessibleAndLockedAulas', fakeAsync(() => {
+    // Select completed aula so item 2 is accessible (not current) and item 3 stays locked.
+    configure({ courseId: String(courseId), itemId: '1' });
+
+    expect(aulaNode(1)?.getAttribute('data-aula-state')).toBe('completed');
+    expect(aulaNode(2)?.getAttribute('data-aula-state')).toBe('accessible');
+    expect(aulaNode(3)?.getAttribute('data-aula-state')).toBe('locked');
+
+    const completedIcon = aulaStateIcon(1);
+    const accessibleIcon = aulaStateIcon(2);
+    const lockedIcon = aulaStateIcon(3);
+
+    expect(completedIcon)
+      .withContext('completed aula must render a decorative mat-icon')
+      .not.toBeNull();
+    expect(accessibleIcon)
+      .withContext('accessible aula must render a decorative mat-icon')
+      .not.toBeNull();
+    expect(lockedIcon)
+      .withContext('locked aula must render a decorative mat-icon')
+      .not.toBeNull();
+    if (!completedIcon || !accessibleIcon || !lockedIcon) {
+      return;
+    }
+
+    expect(iconFontName(completedIcon)).toBe('check_circle');
+    expect(iconFontName(accessibleIcon)).toBe('radio_button_unchecked');
+    expect(iconFontName(lockedIcon)).toBe('lock');
+    expect(completedIcon.getAttribute('aria-hidden')).toBe('true');
+    expect(accessibleIcon.getAttribute('aria-hidden')).toBe('true');
+    expect(lockedIcon.getAttribute('aria-hidden')).toBe('true');
+
+    // Current takes precedence over accessible when that aula is selected.
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    expect(aulaNode(2)?.getAttribute('data-aula-state')).toBe('current');
+    const currentIcon = aulaStateIcon(2);
+    expect(currentIcon)
+      .withContext('current aula must render a decorative mat-icon')
+      .not.toBeNull();
+    if (!currentIcon) {
+      return;
+    }
+    expect(iconFontName(currentIcon)).toBe('play_arrow');
+    expect(currentIcon.getAttribute('aria-hidden')).toBe('true');
+  }));
+
+  it('shouldKeepLockedAulaMutedWithLockIconAndUnlockedAccentIcons', fakeAsync(() => {
+    // Lesson route so aula 2 is current (course root no longer auto-selects).
+    configure({ courseId: String(courseId), itemId: '2' });
+
+    const completed = aulaNode(1);
+    const current = aulaNode(2);
+    const locked = aulaNode(3);
+    const completedIcon = aulaStateIcon(1);
+    const currentIcon = aulaStateIcon(2);
+    const lockedIcon = aulaStateIcon(3);
+
+    expect(completed).not.toBeNull();
+    expect(current).not.toBeNull();
+    expect(locked).not.toBeNull();
+    expect(locked?.getAttribute('aria-disabled')).toBe('true');
+
+    expect(completedIcon).withContext('completed needs check_circle icon').not.toBeNull();
+    expect(currentIcon).withContext('current needs play_arrow icon').not.toBeNull();
+    expect(lockedIcon).withContext('locked needs lock icon').not.toBeNull();
+    if (!completed || !current || !locked || !completedIcon || !currentIcon || !lockedIcon) {
+      return;
+    }
+
+    expect(iconFontName(completedIcon)).toBe('check_circle');
+    expect(iconFontName(currentIcon)).toBe('play_arrow');
+    expect(iconFontName(lockedIcon)).toBe('lock');
+    expect(completedIcon.getAttribute('aria-hidden')).toBe('true');
+    expect(currentIcon.getAttribute('aria-hidden')).toBe('true');
+    expect(lockedIcon.getAttribute('aria-hidden')).toBe('true');
+
+    const accent = VISUAL_SHELL_TOKENS['--color-accent'];
+    const muted = VISUAL_SHELL_TOKENS['--color-text-muted'];
+
+    expect(
+      usesTokenColor(getComputedStyle(completed), accent)
+      || usesTokenColor(getComputedStyle(completedIcon), accent)
+    ).withContext('completed unlocked icon/row must use accent').toBeTrue();
+    expect(
+      usesTokenColor(getComputedStyle(current), accent)
+      || usesTokenColor(getComputedStyle(currentIcon), accent)
+    ).withContext('current unlocked icon/row must use accent').toBeTrue();
+    expect(
+      usesTokenColor(getComputedStyle(locked), muted)
+      || usesTokenColor(getComputedStyle(lockedIcon), muted)
+    ).withContext('locked icon/row must use muted token').toBeTrue();
   }));
 
   it('shouldExposeAulasControlForSidebarAccessOnNarrowViewport', fakeAsync(() => {
@@ -1127,12 +1668,17 @@ describe('CourseViewComponent summary and media (T17)', () => {
   let studyApi: jasmine.SpyObj<StudyApi>;
   let coursesApi: jasmine.SpyObj<CoursesApi>;
 
-  function configure(item: CourseItemResponse): void {
+  function configure(item: CourseItemResponse, options: { courseRoot?: boolean } = {}): void {
     TestBed.resetTestingModule();
+
+    const courseRoot = options.courseRoot === true;
+    const params = courseRoot
+      ? { courseId: String(courseId) }
+      : { courseId: String(courseId), itemId: String(item.id) };
 
     studyApi = jasmine.createSpyObj('StudyApi', ['getCourseStudy', 'getStudyItem']);
     coursesApi = jasmine.createSpyObj('CoursesApi', ['findCourse']);
-    const progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress']);
+    const progressApi = jasmine.createSpyObj('ProgressApi', ['updateItemProgress', 'downloadCourseCertificate']);
     const discussionApi = jasmine.createSpyObj('DiscussionApi', [
       'listComments',
       'createComment',
@@ -1140,11 +1686,22 @@ describe('CourseViewComponent summary and media (T17)', () => {
       'hideComment',
       'restoreComment'
     ]);
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(true));
+    confirmation.confirmOrTrue.and.returnValue(of(true));
     discussionApi.listComments.and.returnValue(of([]) as never);
 
-    studyApi.getCourseStudy.and.returnValue(of({ courseId, items: studyTree }) as never);
+    studyApi.getCourseStudy.and.returnValue(of({
+      courseId,
+      items: studyTree,
+      completedItems: 1,
+      totalItems: 2,
+      percentComplete: 50,
+      concluded: false
+    }) as never);
     studyApi.getStudyItem.and.returnValue(of(item) as never);
     progressApi.updateItemProgress.and.returnValue(of({ completed: true }) as never);
+    progressApi.downloadCourseCertificate.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })) as never);
     coursesApi.findCourse.and.returnValue(of({
       teaching: false,
       enrolled: true,
@@ -1161,20 +1718,25 @@ describe('CourseViewComponent summary and media (T17)', () => {
     TestBed.configureTestingModule({
       imports: [CourseViewComponent, NoopAnimationsModule],
       providers: [
-        provideRouter([{ path: 'courses/:courseId/lessons/:itemId', component: CourseViewComponent }]),
+        provideRouter([
+          { path: 'courses/:courseId', component: CourseViewComponent },
+          { path: 'courses/:courseId/lessons/:itemId', component: CourseViewComponent }
+        ]),
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: StudyApi, useValue: studyApi },
         { provide: ProgressApi, useValue: progressApi },
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CourseItemsApi, useValue: jasmine.createSpyObj('CourseItemsApi', { createPlaybackTicket: of({ url: '/api/media/playback/1/1/1?expires=1&sig=x' }) }) },
+        { provide: CourseImagesApi, useValue: jasmine.createSpyObj('CourseImagesApi', { createImageTickets: of({ tickets: [] }) }) },
         { provide: DiscussionApi, useValue: discussionApi },
+        { provide: ConfirmationService, useValue: confirmation },
         { provide: AuthService, useValue: authServiceStub },
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { paramMap: convertToParamMap({ courseId: String(courseId), itemId: String(item.id) }) },
-            paramMap: of(convertToParamMap({ courseId: String(courseId), itemId: String(item.id) }))
+            snapshot: { paramMap: convertToParamMap(params) },
+            paramMap: of(convertToParamMap(params))
           }
         }
       ]
@@ -1187,6 +1749,7 @@ describe('CourseViewComponent summary and media (T17)', () => {
   }
 
   it('shouldRenderCourseAndAuthorSummaryPanels', fakeAsync(() => {
+    // Overview panels belong on course root (not while viewing an aula).
     configure({
       id: 1,
       courseId,
@@ -1194,7 +1757,7 @@ describe('CourseViewComponent summary and media (T17)', () => {
       itemType: 'MARKDOWN',
       sortOrder: 1,
       markdownBody: '# Boas-vindas'
-    });
+    }, { courseRoot: true });
 
     const summary = fixture.nativeElement.querySelector('[data-testid="course-summary"]');
     expect(summary).not.toBeNull();

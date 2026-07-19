@@ -1,5 +1,6 @@
 package dev.vepo.cursos.progress;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,12 +60,29 @@ public class ProgressService {
         if (!teacher) {
             studyService.ensureAccessible(enrollment, item);
         }
-        var existing = itemProgressRepository.findByEnrollmentAndItem(enrollment.getId(), itemId);
-        if (existing.isPresent()) {
-            existing.get().record(Boolean.TRUE.equals(request.completed()), actor.id());
-            return existing.get();
+
+        boolean completed = Boolean.TRUE.equals(request.completed());
+        ItemProgress result;
+        if (!completed) {
+            itemProgressRepository.clearCompletedAfterSortOrder(enrollment.getId(), item.getSortOrder(), actor.id());
+            var existing = itemProgressRepository.findByEnrollmentAndItem(enrollment.getId(), itemId);
+            if (existing.isPresent()) {
+                existing.get().record(false, actor.id());
+                result = existing.get();
+            } else {
+                result = itemProgressRepository.save(new ItemProgress(enrollment, item, false, actor.id()));
+            }
+        } else {
+            var existing = itemProgressRepository.findByEnrollmentAndItem(enrollment.getId(), itemId);
+            if (existing.isPresent()) {
+                existing.get().record(true, actor.id());
+                result = existing.get();
+            } else {
+                result = itemProgressRepository.save(new ItemProgress(enrollment, item, true, actor.id()));
+            }
         }
-        return itemProgressRepository.save(new ItemProgress(enrollment, item, Boolean.TRUE.equals(request.completed()), actor.id()));
+        syncConclusion(enrollment);
+        return result;
     }
 
     public ProgressSummaryResponse summaryForEnrollment(long enrollmentId, PassportUser viewer) {
@@ -88,6 +106,33 @@ public class ProgressService {
                                 .filter(e -> e.getStatus() == EnrollmentStatus.ENROLLED)
                                 .map(this::buildSummary)
                                 .toList();
+    }
+
+    public EnrollmentProgressProjection projectionForEnrollment(Enrollment enrollment) {
+        var items = courseItemRepository.listByCourse(enrollment.getCourse().getId());
+        int total = items.size();
+        int completed = (int) itemProgressRepository.countCompleted(enrollment.getId());
+        double percent = total == 0 ? 0.0 : Math.round((completed * 1000.0) / total) / 10.0;
+        boolean concluded = total > 0 && completed == total;
+        return new EnrollmentProgressProjection(completed, total, percent, concluded, enrollment.getConcludedAt());
+    }
+
+    public void requireConcludedEnrollment(Enrollment enrollment) {
+        var projection = projectionForEnrollment(enrollment);
+        if (!projection.concluded()) {
+            throw CursosException.forbidden("Certificate is available only after the course is concluded");
+        }
+    }
+
+    private void syncConclusion(Enrollment enrollment) {
+        var items = courseItemRepository.listByCourse(enrollment.getCourse().getId());
+        int total = items.size();
+        int completed = (int) itemProgressRepository.countCompleted(enrollment.getId());
+        if (total > 0 && completed == total) {
+            enrollment.markConcluded(Instant.now());
+        } else if (enrollment.isConcluded()) {
+            enrollment.clearConclusion();
+        }
     }
 
     private ProgressSummaryResponse buildSummary(Enrollment enrollment) {

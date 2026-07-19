@@ -1,6 +1,23 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.app-shell-root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  background: var(--color-main-bg);
+}
+
 .main-header {
+  flex: 0 0 var(--shell-header-height);
+  z-index: 20;
   background: var(--color-header);
   color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .brand {
@@ -19,16 +36,6 @@
   color: var(--color-text);
 }
 
-.user-email,
-.user-account-link {
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.user-account-link:hover {
-  color: var(--color-link);
-}
-
 .nav-menu-toggle {
   display: inline-flex;
 }
@@ -38,9 +45,11 @@
   position: fixed;
   top: var(--shell-header-height);
   right: 0;
-  z-index: 10;
+  z-index: 30;
   width: 22rem;
   max-width: 100vw;
+  max-height: calc(100dvh - var(--shell-header-height) - var(--shell-footer-height));
+  overflow: auto;
   padding: 1rem 1.5rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -70,18 +79,64 @@
     list-style: none;
   }
 
-  a {
+  a,
+  .nav-menu-drawer__logout {
     color: var(--color-text);
     text-decoration: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
-  a:hover {
+  a:hover,
+  .nav-menu-drawer__logout:hover {
     color: var(--color-link);
+  }
+
+  .nav-menu-drawer__user {
+    margin: 0.5rem 0 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
   }
 }
 
 .nav-menu-drawer.open {
   display: block;
+}
+
+.page-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  background: var(--color-main-bg);
+}
+
+.main-footer {
+  flex: 0 0 var(--shell-footer-height);
+  z-index: 20;
+  background: var(--color-header);
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  font-size: 0.8rem;
+}
+
+.footer-inner {
+  justify-content: space-between;
+  min-height: var(--shell-footer-height);
+}
+
+.main-footer a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.main-footer a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 750px) {

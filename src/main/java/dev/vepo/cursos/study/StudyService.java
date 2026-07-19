@@ -38,12 +38,21 @@ public class StudyService {
     public StudyResponse studyTree(long courseId, PassportUser viewer) {
         var course = courseService.require(courseId);
         boolean teacher = course.isTaughtBy(viewer.id());
-        var completedItemIds = teacher ? Set.<Long>of()
-                                       : completedItemIds(enrollmentService.requireEnrolledStudent(courseId, viewer.id()));
+        Enrollment enrollment = null;
+        Set<Long> completedItemIds = Set.of();
+        if (!teacher) {
+            enrollment = enrollmentService.requireEnrolledStudent(courseId, viewer.id());
+            completedItemIds = completedItemIds(enrollment);
+        }
+        var courseItems = courseItemRepository.listByCourse(courseId);
         var items = new ArrayList<StudyItemResponse>();
         boolean allPreviousCompleted = true;
-        for (var item : courseItemRepository.listByCourse(courseId)) {
+        int completedCount = 0;
+        for (var item : courseItems) {
             boolean completed = completedItemIds.contains(item.getId());
+            if (completed) {
+                completedCount++;
+            }
             items.add(new StudyItemResponse(item.getId(),
                                             item.getTitle(),
                                             item.getSortOrder(),
@@ -51,7 +60,16 @@ public class StudyService {
                                             teacher || allPreviousCompleted));
             allPreviousCompleted = allPreviousCompleted && completed;
         }
-        return new StudyResponse(courseId, items);
+        int total = courseItems.size();
+        double percent = total == 0 ? 0.0 : (completedCount * 100.0) / total;
+        boolean concluded = enrollment != null && enrollment.isConcluded() && total > 0 && completedCount == total;
+        return new StudyResponse(courseId,
+                                 items,
+                                 completedCount,
+                                 total,
+                                 percent,
+                                 concluded,
+                                 enrollment != null ? enrollment.getConcludedAt() : null);
     }
 
     public CourseItem requireAccessibleItem(long courseId, long itemId, PassportUser viewer) {

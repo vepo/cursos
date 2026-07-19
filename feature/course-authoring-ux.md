@@ -126,3 +126,54 @@ Composer card: avatar initial, placeholder "Participe da discussão…", button 
 
 **Implementation notes:** `CourseItemType.LINK` + `link_url`/`link_description`; VIDEO upload limit 250 MiB; HMAC playback tickets + PostgreSQL `substr` Range streaming; course-view player and editor type selector.
 
+### 2026-07-18 — Course images, reorder fix, in-app dialogs
+
+**Status:** done
+
+**Description:** Optional course cover + course-owned image gallery for Markdown embeds (`course-asset:id`) via signed URLs. Fix item reorder unique-index collision. Replace browser confirms with Material dialogs (keep `beforeunload` for tab close).
+
+#### Wireframe — gallery in Markdown editor
+
+```
+┌──────────────┬───────────────────────────────────────────────┐
+│ items        │ Markdown body                                 │
+│              │ [Image gallery]                               │
+│              │  thumbs · upload · insert ![alt](course-asset:n)│
+│              │ Cover: preview / upload / clear               │
+└──────────────┴───────────────────────────────────────────────┘
+```
+
+#### Feature checklist
+
+| ID | Criterion | Done |
+|----|-----------|------|
+| FC8 | Optional cover on course + catalog cards | ☑ |
+| FC9 | Gallery upload/select/insert Markdown asset refs | ☑ |
+| FC10 | Signed image delivery; block delete if referenced | ☑ |
+| FC11 | Up/down reorder persists without unique errors | ☑ |
+| FC12 | Delete/leave/switch use in-app confirmation dialogs | ☑ |
+
+#### Tasks
+
+| ID | Task | Done |
+|----|------|------|
+| T47 | Image asset schema + signed delivery APIs | ☑ |
+| T48 | Cover UI + catalog/study rendering | ☑ |
+| T49 | Gallery + Markdown insert/render | ☑ |
+| T50 | Two-phase reorder fix + UI feedback | ☑ |
+| T51 | ConfirmationDialog + replace window.confirm | ☑ |
+| T52 | Seed/docs/API client/verification | ☑ |
+
+#### Test coverage
+
+| ID | Test | Covers | Done |
+|----|------|--------|------|
+| TC7 | Image asset upload/ticket/delete-guard | T47 | ☑ |
+| TC8 | Cover/gallery Angular + markdown renderer | T48–T49 | ☑ |
+| TC9 | Reorder adjacent items persistence | T50 | ☑ |
+| TC10 | Dialog confirm/cancel flows | T51 | ☑ |
+
+**Development approval:** approved 2026-07-18 — tasks: T47–T52 (plan implementation)
+
+**Implementation notes:** `tb_course_image_assets` + optional cover FK; HMAC `/api/media/images/...`; two-phase reorder; `ConfirmationDialogComponent` + async `unsavedChangesGuard`.
+

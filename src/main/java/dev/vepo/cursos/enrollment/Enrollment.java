@@ -51,6 +51,9 @@ public class Enrollment {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "concluded_at")
+    private Instant concludedAt;
+
     protected Enrollment() {}
 
     public Enrollment(Course course, PassportUser student, EnrollmentStatus status) {
@@ -101,6 +104,14 @@ public class Enrollment {
         return updatedAt;
     }
 
+    public Instant getConcludedAt() {
+        return concludedAt;
+    }
+
+    public boolean isConcluded() {
+        return concludedAt != null;
+    }
+
     public boolean belongsTo(long passportUserId) {
         return studentPassportUserId == passportUserId;
     }
@@ -122,6 +133,16 @@ public class Enrollment {
 
     public void reopenAsRequested() {
         this.status = EnrollmentStatus.REQUESTED;
+        this.updatedAt = Instant.now();
+    }
+
+    public void markConcluded(Instant at) {
+        this.concludedAt = at;
+        this.updatedAt = Instant.now();
+    }
+
+    public void clearConclusion() {
+        this.concludedAt = null;
         this.updatedAt = Instant.now();
     }
 }

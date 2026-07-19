@@ -225,3 +225,34 @@ Angular unit tests for shell and page layout regions; keep `data-testid` contrac
 - Login uses the dark auth card, visible labels, password visibility control, live error region, and phosphor-green primary action.
 - Component specs cover TC1–TC7. Full Angular suite: 80 tests passed; `mvn verify` includes a successful production Angular build.
 - Documentation synced in `docs/domain-specification.md`, `docs/feature-catalog.md`, `README.md`, and `ARCHITECTURE.md`.
+
+### 2026-07-18 — Persistent header/footer + account in menu
+
+**Status:** done
+
+**Description:** Fixed-height header and footer; only `.page-content` scrolls. Move display name / **Sair** into the menu Conta section. Footer: copyright + OpenAPI link.
+
+#### Feature checklist
+
+| ID | Criterion | Done |
+|----|-----------|------|
+| FC10 | Header and footer always visible; main scrolls | ☑ |
+| FC11 | Account link and Sair only inside menu | ☑ |
+| FC12 | Footer has copyright + OpenAPI | ☑ |
+
+#### Tasks
+
+| ID | Task | Done |
+|----|------|------|
+| T37 | Persistent shell + menu account/logout | ☑ |
+| T38 | Shell docs/tests/verification | ☑ |
+
+#### Test coverage
+
+| ID | Test | Covers | Done |
+|----|------|--------|------|
+| TC8 | Shell scroll/landmarks + menu account controls | T37 | ☑ |
+
+**Development approval:** approved 2026-07-18 — tasks: T37, T38 (plan implementation)
+
+**Implementation notes:** `100dvh` column shell; Conta section holds Minha conta + Sair + display name; footer OpenAPI link.

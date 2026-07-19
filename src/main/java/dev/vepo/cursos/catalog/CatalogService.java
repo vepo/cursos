@@ -5,11 +5,17 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.stream.Stream;
 
+import dev.vepo.cursos.course.Course;
 import dev.vepo.cursos.course.CourseRepository;
+import dev.vepo.cursos.course.image.CourseImageAssetService;
+import dev.vepo.cursos.enrollment.Enrollment;
 import dev.vepo.cursos.enrollment.EnrollmentRepository;
 import dev.vepo.cursos.enrollment.EnrollmentStatus;
+import dev.vepo.cursos.identity.AuthorProfile;
 import dev.vepo.cursos.identity.AuthorProfileService;
 import dev.vepo.cursos.identity.PassportUser;
+import dev.vepo.cursos.progress.EnrollmentProgressProjection;
+import dev.vepo.cursos.progress.ProgressService;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
@@ -19,14 +25,20 @@ public class CatalogService {
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final AuthorProfileService authorProfileService;
+    private final CourseImageAssetService courseImageAssetService;
+    private final ProgressService progressService;
 
     @Inject
     public CatalogService(CourseRepository courseRepository,
                           EnrollmentRepository enrollmentRepository,
-                          AuthorProfileService authorProfileService) {
+                          AuthorProfileService authorProfileService,
+                          CourseImageAssetService courseImageAssetService,
+                          ProgressService progressService) {
         this.courseRepository = courseRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.authorProfileService = authorProfileService;
+        this.courseImageAssetService = courseImageAssetService;
+        this.progressService = progressService;
     }
 
     public CatalogResponse loadCatalog(PassportUser user, String categorySlug, String authorization) {
@@ -58,7 +70,7 @@ public class CatalogService {
             if (!matchesCategory(course, categorySlug)) {
                 continue;
             }
-            teaching.add(CatalogCourseResponse.load(course, true, null, "teaching", authors.get(course.getTeacherPassportUserId())));
+            teaching.add(toCatalogCourse(course, true, null, "teaching", authors.get(course.getTeacherPassportUserId()), null));
         }
 
         for (var enrollment : enrollmentRepository.listByStudent(user.id())) {
@@ -69,11 +81,15 @@ public class CatalogService {
                 continue;
             }
             if (enrollment.getStatus() == EnrollmentStatus.ENROLLED || enrollment.getStatus() == EnrollmentStatus.REQUESTED) {
-                enrolled.add(CatalogCourseResponse.load(enrollment.getCourse(),
-                                                        false,
-                                                        enrollment.getStatus(),
-                                                        enrollment.getStatus() == EnrollmentStatus.ENROLLED ? "enrolled" : "requested",
-                                                        authors.get(enrollment.getCourse().getTeacherPassportUserId())));
+                EnrollmentProgressProjection progress = enrollment.getStatus() == EnrollmentStatus.ENROLLED
+                                                                                                            ? progressService.projectionForEnrollment(enrollment)
+                                                                                                            : null;
+                enrolled.add(toCatalogCourse(enrollment.getCourse(),
+                                             false,
+                                             enrollment.getStatus(),
+                                             enrollment.getStatus() == EnrollmentStatus.ENROLLED ? "enrolled" : "requested",
+                                             authors.get(enrollment.getCourse().getTeacherPassportUserId()),
+                                             progress));
             }
         }
 
@@ -88,17 +104,32 @@ public class CatalogService {
             if (!matchesCategory(course, categorySlug)) {
                 continue;
             }
-            available.add(CatalogCourseResponse.load(course, false, status, "available", authors.get(course.getTeacherPassportUserId())));
+            available.add(toCatalogCourse(course, false, status, "available", authors.get(course.getTeacherPassportUserId()), null));
         }
 
         return new CatalogResponse(teaching, enrolled, available);
     }
 
-    private boolean matchesCategory(dev.vepo.cursos.course.Course course, String categorySlug) {
+    private CatalogCourseResponse toCatalogCourse(Course course,
+                                                  boolean teaching,
+                                                  EnrollmentStatus enrollmentStatus,
+                                                  String section,
+                                                  AuthorProfile author,
+                                                  EnrollmentProgressProjection progress) {
+        return CatalogCourseResponse.load(course,
+                                          teaching,
+                                          enrollmentStatus,
+                                          section,
+                                          author,
+                                          courseImageAssetService.signedUrlOrNull(course),
+                                          progress);
+    }
+
+    private boolean matchesCategory(Course course, String categorySlug) {
         if (categorySlug == null || categorySlug.isBlank()) {
             return true;
         }
         var slug = categorySlug.toLowerCase(Locale.ROOT);
-        return course.getCategories().stream().anyMatch(c -> c.getSlug().equals(slug));
+        return course.getCategories().stream().anyMatch(c -> slug.equalsIgnoreCase(c.getSlug()));
     }
 }

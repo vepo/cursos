@@ -35,7 +35,7 @@ Cursos is a **modular monolith**: one deployable, feature packages under `dev.ve
 |---------|----------|---------------|
 | **Platform** | `infra` | JDK/Jakarta only |
 | **Identity & access** | `auth`, `identity` | platform |
-| **Catalog** | `catalog` | platform, identity, course, enrollment |
+| **Catalog** | `catalog` | platform, identity, course, enrollment, progress |
 | **Course** | `course` (incl. `course.category`, `course.item`) | platform, identity |
 | **Enrollment** | `enrollment` | platform, identity, course, mailer |
 | **Progress** | `progress` | platform, identity, course, enrollment, study |
@@ -77,8 +77,9 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Ensinando** | Catalog section: courses the current user teaches (draft or published). | Catalog `teaching` bucket; actions Visualizar / Editar / Publicar / Despublicar |
 | **Teaching courses** | Courses the current user teaches. | Also under **Ensinar → Meus cursos** |
 | **Author description** | Public biography of a course teacher, owned by Passport User. | Live-loaded for course summary; not Passport Profile (roles) |
-| **Sobre o curso** | Course summary panel on the study page. | Course `summary` |
-| **Sobre o autor** | Author panel on the study page with live name and description. | Passport public author projection |
+| **Sobre o curso** | Course summary panel on the study **overview** (course root). | Course `summary`; hidden while an aula is open |
+| **Sobre o autor** | Author panel on the study **overview** with live name and description. | Passport public author projection; hidden while an aula is open |
+| **Visão geral** | Sidebar entry that opens the course overview (`/courses/:id`) before aulas. | Study tree; above ordered aulas |
 | **Matriculado** | Catalog section: courses where enrollment status is **ENROLLED**. | `GET /catalog/enrolled` |
 | **Disponível / Solicitado** | Catalog section: published courses available to request, plus courses with **REQUESTED** enrollment by current user. | `GET /catalog/available`; UI **Disponível / Solicitado** |
 | **Category** | Label grouping courses (e.g. Programming, Design). | `Category`, `tb_categories`; UI **Categoria** |
@@ -88,32 +89,37 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | Term | Meaning | Code / notes |
 |------|---------|--------------|
 | **Visual shell** | Dark application frame (GitHub-dark developer palette): near-black **header**, contextual **sidebar**, and **main** content region. | Dark-only; CSS variables and shared `.app-shell-*` classes |
-| **Header** | Persistent top bar containing the Cursos brand and session actions. | Authenticated: display name → **Minha conta**, **Sair**, then the **menu icon**; unauthenticated: **Entrar** |
+| **Header** | Persistent top bar that stays visible while content scrolls. | Authenticated: brand + **menu icon**; unauthenticated: brand + **Entrar** |
+| **Footer** | Persistent bottom bar with product copyright and OpenAPI link. | Fixed with header; does not scroll away |
 | **Sidebar** | Left near-black region whose contents depend on the current screen. | Catalog categories, study aula tree, teaching-course list, or editor item list |
-| **Main** | Primary dark content region beside or below the contextual sidebar. | Nested teacher/admin pages use this region without a second toolbar |
+| **Main** | Primary dark content region beside or below the contextual sidebar; the scrollable shell region. | Nested teacher/admin pages use this region without a second toolbar |
 | **Menu icon** | Top-right authenticated control that opens or closes the navigation drawer. | Closed by default; `aria-expanded` reflects state |
-| **Navigation menu** | Right-anchored drawer containing at most two navigation levels. | Closes on toggle, leaf navigation, or Escape; full-width on narrow viewports |
+| **Navigation menu** | Right-anchored drawer containing at most two navigation levels plus session actions. | Conta includes **Minha conta** and **Sair**; closes on toggle, leaf navigation, or Escape |
+| **Confirmation dialog** | In-app Material dialog for destructive or discard confirmations. | Delete item, leave dirty editor, switch dirty selection |
 | **Aprender** | Navigation group for student learning entry points. | **Catálogo**, **Meus cursos** |
 | **Ensinar** | Navigation group for teacher authoring and course management. | **Meus cursos**, **Novo curso** |
-| **Conta** | Navigation group for account self-service. | **Minha conta** |
-| **Minha conta** | Screen where the user views/edits own name and email and changes password. | Route `/account` |
+| **Conta** | Navigation group for account self-service and logout. | **Minha conta**, **Sair** |
+| **Minha conta** | Screen where the user views/edits own name, email, author description, and password. | Route `/account` |
 | **Admin** | Role-gated navigation group for platform administration. | Visible only to **Cursos admin**; **Categorias** |
 
 ### Course & content
 
 | Term | Meaning | Code / notes |
 |------|---------|--------------|
-| **Course** | A teachable unit: title, description, category, teacher, published flag. | `Course`, `tb_courses` |
+| **Course** | A teachable unit: title, description, category, teacher, published flag, optional cover. | `Course`, `tb_courses` |
+| **Course cover** | Optional raster image shown on catalog cards and course summary. | `cover_image_asset_id`; not an aula |
+| **Course image asset** | Course-owned gallery image stored as BYTEA for Markdown embeds or cover. | `tb_course_image_assets`; separate from course items |
+| **Image gallery** | Teacher UI to upload/select assets and insert Markdown references. | Editor gallery; refs `![alt](course-asset:{id})` |
 | **Published course** | Course visible in **Disponível / Solicitado** for enrollment requests. | Status **PUBLISHED**; UI **Publicado** / **Publicar curso** |
 | **Draft course** | Course not listed for enrollment. | Status **DRAFT**; UI **Rascunho** / **Despublicar** |
 | **Unpublish** | Teacher action returning a published course to draft. | `POST /courses/{id}/unpublish`; UI **Despublicar** |
 | **Course item** | Single ordered piece of course content. | `CourseItem`, `tb_course_items` |
-| **Item order** | Zero-based position determining display sequence. | `CourseItem.position` |
-| **Markdown item** | Course item type storing rich text. | `CourseItemType.MARKDOWN` |
-| **Image item** | Course item type storing binary image in `tb_course_resources`. | `CourseItemType.IMAGE` |
+| **Item order** | Zero-based position determining display sequence. | `CourseItem.sortOrder` |
+| **Markdown item** | Course item type storing rich text; may reference gallery assets. | `CourseItemType.MARKDOWN` |
+| **Image item** | Course item type storing binary image in `tb_course_resources` (aula media). | `CourseItemType.IMAGE` |
 | **Video item** / **Video aula** | Course item type storing binary video in PostgreSQL. | `CourseItemType.VIDEO`; seekable via **Playback ticket** |
 | **Link item** / **Link aula** | Course item type with an external HTTPS URL and optional description. | `CourseItemType.LINK`; UI **Abrir recurso** |
-| **Playback ticket** | Short-lived signed URL authorizing Range streaming of a media resource. | Issued after JWT auth; used by `<video>` without Bearer header |
+| **Playback ticket** | Short-lived signed URL authorizing media without Bearer headers. | Video Range stream; image asset URLs |
 | **Reorder items** | Teacher action changing item sequence. | `POST …/items/reorder` |
 
 ### Aula discussion
@@ -145,9 +151,13 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | Term | Meaning | Code / notes |
 |------|---------|--------------|
 | **Item progress** | Per-enrollment completion state for one course item. | `ItemProgress`, `tb_item_progress` |
-| **Mark complete** | Student toggles item as completed. | UI checkbox / **Concluir** |
-| **Teacher adjust** | Teacher overrides student item completion. | `adjusted_by_teacher = true` |
-| **Progress percentage** | `completedItems / totalItems * 100` rounded. | Shown on course card and study view |
+| **Mark complete** | Student marks an item completed and continues to the next ordered aula when one exists. | UI **Concluir aula**; completing the final aula opens the finish screen |
+| **Rollback progress** | Student clears completion for the selected aula and every later aula (cascade). | UI **Desfazer progresso**; confirmation dialog |
+| **Teacher adjust** | Teacher overrides student item completion. | `adjusted` via actor; cascade applies on incomplete |
+| **Progress percentage** | `completedItems / totalItems * 100` rounded. | Study sidebar + catalog |
+| **Course finish screen** | Study main panel shown when all aulas are complete. | Congrats + certificate download |
+| **Course certificate** | On-demand downloadable PDF for a concluded enrollment. | No verification record; regenerated each download |
+| **Concluded enrollment** | Enrollment with every course item complete (`concluded_at` set). | Status stays **ENROLLED**; UI **Concluído** |
 
 ### Email
 
@@ -199,16 +209,27 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 ### Progress
 
 1. **Item progress** exists only for **ENROLLED** students.
-2. **Mark complete** is a completion toggle allowed for the enrolled student on their own enrollment and only for an accessible aula.
+2. **Mark complete** is allowed for the enrolled student on their own enrollment and only for an accessible aula; after success, the study UI opens the next ordered aula when one exists, or the **course finish screen** when all aulas are complete.
 3. **Teacher adjust** is allowed only for the course teacher on enrollments for that course.
 4. **Progress percentage** uses all course items as denominator; items without progress rows count as incomplete.
-5. Un-completing an aula relocks later aulas until all preceding aulas are complete again; their progress and discussions remain stored.
+5. **Rollback progress** clears completion for the selected aula and every later aula by item order; earlier aulas stay complete; later aulas relock until predecessors are complete again. Discussions remain stored.
+6. When completed items equal total items (and total > 0), the enrollment is **concluded** (`concluded_at` = latest 100% instant). Rollback below 100% clears `concluded_at`.
+7. **Course certificate** download is allowed only while the enrollment is concluded; PDF is generated on demand.
 
 ### Catalog
 
-1. The catalog home omits teaching courses; **Ensinar → Meus cursos** lists courses where `teacher_id = current user`.
-2. **Matriculado** lists courses with **ENROLLED** enrollment for current user.
-3. **Disponível / Solicitado** lists published courses not taught by current user, excluding **ENROLLED**; includes **REQUESTED** with badge.
+1. Catalog home shows **Ensinando** for courses taught by the current user (draft or published), then **Matriculado** and **Disponível / Solicitado**.
+2. Taught courses are excluded from **Disponível / Solicitado**.
+3. **Matriculado** lists courses with **ENROLLED** enrollment for current user.
+4. **Disponível / Solicitado** lists published courses not taught by current user, excluding **ENROLLED**; includes **REQUESTED** with badge.
+
+### Course images
+
+1. A course has at most one **course cover**, referencing a **course image asset** owned by that course.
+2. Gallery assets are not course items and do not affect progress or sequential unlock.
+3. Markdown may embed only `course-asset:{id}` references to assets of the same course; external image URLs are rejected by the renderer.
+4. Deleting an asset is blocked while it is the cover or referenced by any markdown body on that course.
+5. Image bytes are served via short-lived signed URLs (no Bearer on `<img>`).
 
 ### Aula discussion
 
@@ -337,6 +358,10 @@ erDiagram
 | Direct enroll | Matricular aluno |
 | Progress | Progresso |
 | Mark complete | Concluir aula |
+| Rollback progress | Desfazer progresso |
+| Course finish screen | Curso concluído |
+| Download certificate | Baixar certificado |
+| Concluded enrollment | Concluído |
 | Navigation menu | Aprender / Ensinar / Admin |
 | Visual shell | Dark application frame |
 | Header | Cursos / user / Sair / menu icon |
@@ -345,5 +370,8 @@ erDiagram
 | Menu icon | Abrir menu / Fechar menu |
 | Hide comment | Ocultar comentário |
 | Restore comment | Restaurar comentário |
+| Course overview | Visão geral |
+| Sobre o curso | Sobre o curso |
+| Sobre o autor | Sobre o autor |
 
 English UI (if added later) must map to the same domain terms in code.

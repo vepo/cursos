@@ -66,9 +66,10 @@ Generated TypeScript clients land in `src/app/generated/` (gitignored). Angular 
 ### Catalog & courses
 
 - **Catalog home** — **Ensinando**, **Matriculado**, and **Disponível / Solicitado** (taught courses stay out of Available)
-- **Visual shell** — GitHub-dark developer workspace with contextual category, aula, teaching, or editor sidebars
+- **Visual shell** — GitHub-dark developer workspace with sticky header/footer, contextual sidebars, and account/logout in the menu drawer
 - **Navigation drawer** — top-right, click-only access to **Aprender**, **Ensinar**, **Conta**, and role-gated **Admin**
 - **Minha conta** — edit name/email/author description and change password via Passport
+- **Course media** — optional cover images, gallery assets embedded in Markdown via signed URLs, and video playback tickets
 - **Categories** — classify courses; create requires `cursos.admin`
 - **Course** — title, description, categories; creator is the **teacher**; clear **Publicar curso** / **Despublicar**
 - **Course items / aulas** — ordered **MARKDOWN**, **LINK**, **IMAGE**, **VIDEO** (video in PostgreSQL `BYTEA` with signed Range playback); two-pane editor with unsaved-changes warnings
@@ -77,6 +78,9 @@ Generated TypeScript clients land in `src/app/generated/` (gitignored). Angular 
 
 - **Course summary** — **Sobre o curso** and live **Sobre o autor** panels on the study page
 - **Sequential unlock** — first aula open; later aulas unlock only after previous ones are completed (teacher preview bypasses)
+- **Progress bar** — study sidebar shows completed/total and percentage
+- **Rollback** — **Desfazer progresso** clears the selected aula and all later aulas
+- **Course completion** — finish screen at 100%; authenticated PDF certificate download; catalog **Concluído** badge
 - **Rendered markdown** — sanitized HTML with heading sizes below the aula title; raw markdown only when editing
 - **Link aulas** — safe **Abrir recurso** (`target="_blank"`, `rel="noopener noreferrer"`)
 - **Video aulas** — authenticated playback tickets and seekable HTTP Range streaming
@@ -88,7 +92,8 @@ Generated TypeScript clients land in `src/app/generated/` (gitignored). Angular 
 
 - **Enrollment request** — student self-enrolls → **REQUESTED** until teacher approves
 - **Direct enrollment** — teacher adds a student by email; optional notification email
-- **Progress** — students mark aulas complete; teachers can adjust; percentage from completed items
+- **Progress** — students mark aulas complete or roll back; teachers can adjust; percentage from completed items; `concluded_at` when 100%
+- **Certificate** — enrolled students download a server-generated PDF after course conclusion
 
 ### Post-MVP (designed)
 

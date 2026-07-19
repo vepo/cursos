@@ -34,6 +34,21 @@ CREATE TABLE tb_course_resources (
     content BYTEA NOT NULL
 );
 
+CREATE TABLE tb_course_image_assets (
+    id BIGSERIAL PRIMARY KEY,
+    course_id BIGINT NOT NULL REFERENCES tb_courses (id) ON DELETE CASCADE,
+    content_type VARCHAR(200) NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    size_bytes BIGINT NOT NULL,
+    content BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX idx_course_image_assets_course ON tb_course_image_assets (course_id);
+
+ALTER TABLE tb_courses
+    ADD COLUMN cover_image_asset_id BIGINT REFERENCES tb_course_image_assets (id) ON DELETE SET NULL;
+
 CREATE TABLE tb_course_items (
     id BIGSERIAL PRIMARY KEY,
     course_id BIGINT NOT NULL REFERENCES tb_courses (id) ON DELETE CASCADE,
@@ -61,6 +76,7 @@ CREATE TABLE tb_enrollments (
     student_name VARCHAR(200) NOT NULL,
     student_email VARCHAR(320) NOT NULL,
     status VARCHAR(20) NOT NULL,
+    concluded_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     UNIQUE (course_id, student_passport_user_id)

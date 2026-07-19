@@ -1,4 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MatChipsModule } from '@angular/material/chips';
 import { CatalogApi } from '../../generated/api/catalog.service';
@@ -15,7 +16,8 @@ import { CategoryResponse } from '../../generated/model/categoryResponse';
   styleUrl: './home.component.scss',
   imports: [
     RouterLink,
-    MatChipsModule
+    MatChipsModule,
+    DecimalPipe
   ]
 })
 export class HomeComponent implements OnInit {

@@ -17,7 +17,7 @@
             <span class="dirty-dot" aria-label="não salvo"></span>
           }
         </button>
-        @for (item of items; track item.id) {
+        @for (item of items; track item.id; let first = $first; let last = $last) {
           <div class="editor-nav-row">
             <button
               type="button"
@@ -31,8 +31,18 @@
               }
             </button>
             <div class="editor-nav-tools">
-              <button type="button" class="btn-quiet" aria-label="Mover para cima" (click)="moveItem(item, -1)">↑</button>
-              <button type="button" class="btn-quiet" aria-label="Mover para baixo" (click)="moveItem(item, 1)">↓</button>
+              <button
+                type="button"
+                class="btn-quiet"
+                aria-label="Mover para cima"
+                [disabled]="!canMoveUp(item)"
+                (click)="moveItem(item, -1)">↑</button>
+              <button
+                type="button"
+                class="btn-quiet"
+                aria-label="Mover para baixo"
+                [disabled]="!canMoveDown(item)"
+                (click)="moveItem(item, 1)">↓</button>
               <button type="button" class="btn-danger" aria-label="Excluir item" (click)="deleteItem(item)">×</button>
             </div>
           </div>
@@ -108,6 +118,26 @@
         </mat-form-field>
 
         @if (!isNew) {
+          <section class="cover-editor" data-testid="cover-editor">
+            <h3>Capa do curso</h3>
+            <div class="cover-preview" data-testid="cover-preview">
+              @if (coverImageUrl) {
+                <img [src]="coverImageUrl" alt="Capa do curso" />
+              } @else {
+                <div class="cover-fallback" aria-hidden="true">Sem capa</div>
+              }
+            </div>
+            <div class="inline-actions">
+              <label class="btn-quiet file-label">
+                Enviar capa
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden (change)="onCoverFileSelected($event)" />
+              </label>
+              @if (coverImageAssetId) {
+                <button mat-stroked-button type="button" data-testid="clear-cover" (click)="clearCover()">Remover capa</button>
+              }
+            </div>
+          </section>
+
           <h3>Git</h3>
           <mat-form-field appearance="outline" class="full">
             <mat-label>URL do repositório</mat-label>
@@ -189,12 +219,72 @@
           <mat-form-field appearance="outline" class="full">
             <mat-label>Conteúdo Markdown</mat-label>
             <textarea
+              #markdownBody
               matInput
               rows="16"
               [(ngModel)]="itemBody"
               (ngModelChange)="markDirty()"
               data-testid="item-body"></textarea>
           </mat-form-field>
+
+          <section class="image-gallery" data-testid="image-gallery">
+            <h3>Galeria de imagens</h3>
+            <p class="meta">Envie imagens e insira referências estáveis no Markdown.</p>
+            <div class="inline-actions">
+              <label class="btn-quiet file-label">
+                Enviar imagem
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  hidden
+                  data-testid="gallery-upload"
+                  (change)="onGalleryFileSelected($event)" />
+              </label>
+              @if (galleryUploadPending) {
+                <span class="meta">Enviando…</span>
+              }
+            </div>
+            @if (galleryError) {
+              <p class="error" role="alert">{{ galleryError }}</p>
+            }
+            <div class="gallery-grid">
+              @for (asset of gallery; track asset.id) {
+                <button
+                  type="button"
+                  class="gallery-thumb"
+                  [class.is-selected]="selectedGalleryAssetId === asset.id"
+                  [attr.data-testid]="'gallery-asset-' + asset.id"
+                  (click)="selectGalleryAsset(asset)">
+                  <img [src]="asset.signedUrl" [alt]="asset.filename || 'Imagem'" />
+                  @if (asset.cover) {
+                    <span class="gallery-badge">Capa</span>
+                  }
+                  @if (isAssetReferenced(asset.id)) {
+                    <span class="gallery-badge gallery-badge--ref">Em uso</span>
+                  }
+                </button>
+              }
+            </div>
+            @if (selectedGalleryAsset(); as selected) {
+              <div class="gallery-insert">
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>Texto alternativo</mat-label>
+                  <input matInput [(ngModel)]="galleryAltText" data-testid="gallery-alt" />
+                </mat-form-field>
+                <div class="inline-actions">
+                  <button mat-stroked-button type="button" data-testid="insert-gallery-image" (click)="insertSelectedGalleryImage()">
+                    Inserir no Markdown
+                  </button>
+                  <button mat-stroked-button type="button" (click)="setCoverFromGallery(selected)">
+                    Usar como capa
+                  </button>
+                  <button mat-button class="btn-danger" type="button" data-testid="delete-gallery-image" (click)="deleteGalleryAsset(selected)">
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            }
+          </section>
         }
       </section>
     }

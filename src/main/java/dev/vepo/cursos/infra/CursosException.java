@@ -26,4 +26,8 @@ public class CursosException extends WebApplicationException {
     public static CursosException conflict(String message) {
         return new CursosException(Response.Status.CONFLICT, message);
     }
+
+    public static CursosException serverError(String message) {
+        return new CursosException(Response.Status.INTERNAL_SERVER_ERROR, message);
+    }
 }

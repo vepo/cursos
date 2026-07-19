@@ -15,15 +15,21 @@ public record CourseResponse(
                              String teacherUsername,
                              String teacherName,
                              String teacherDescription,
+                             Long coverImageAssetId,
+                             String coverImageUrl,
                              List<CategoryResponse> categories,
                              Instant createdAt,
                              Instant updatedAt) {
 
     public static CourseResponse load(Course course) {
-        return load(course, null);
+        return load(course, null, null);
     }
 
     public static CourseResponse load(Course course, AuthorProfile author) {
+        return load(course, author, null);
+    }
+
+    public static CourseResponse load(Course course, AuthorProfile author, String coverImageUrl) {
         var teacherName = author != null && author.name() != null && !author.name().isBlank()
                                                                                               ? author.name()
                                                                                               : course.getTeacherName();
@@ -39,6 +45,8 @@ public record CourseResponse(
                                   teacherUsername,
                                   teacherName,
                                   description,
+                                  course.getCoverImageAssetId(),
+                                  coverImageUrl,
                                   course.getCategories().stream().map(CategoryResponse::load).toList(),
                                   course.getCreatedAt(),
                                   course.getUpdatedAt());

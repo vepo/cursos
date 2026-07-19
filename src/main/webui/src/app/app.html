@@ -1,74 +1,93 @@
-<header class="main-header" data-testid="visual-shell-header">
-  <div class="shell-inner">
-    <a
-      routerLink="/"
-      class="brand"
-      data-testid="visual-shell-brand"
-      routerLinkActive="brand-active"
-      [routerLinkActiveOptions]="{ exact: true }"
-      aria-label="Cursos — início">
-      <mat-icon fontIcon="school" aria-hidden="true"></mat-icon>
-      <span class="brand-name">Cursos</span>
-    </a>
+<div class="app-shell-root" data-testid="app-shell-root">
+  <header class="main-header" data-testid="visual-shell-header">
+    <div class="shell-inner">
+      <a
+        routerLink="/"
+        class="brand"
+        data-testid="visual-shell-brand"
+        routerLinkActive="brand-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        aria-label="Cursos — início">
+        <mat-icon fontIcon="school" aria-hidden="true"></mat-icon>
+        <span class="brand-name">Cursos</span>
+      </a>
 
-    <div class="grow-space" aria-hidden="true"></div>
+      <div class="grow-space" aria-hidden="true"></div>
 
-    <div class="header-actions">
-      @if (isAuthenticated()) {
-        <a class="user-account-link" routerLink="/account" data-testid="account-link">{{ displayName() }}</a>
-        <button matButton="outlined" type="button" (click)="logout()">Sair</button>
-        <button
-          #menuToggle
-          class="nav-menu-toggle"
-          data-testid="nav-menu-toggle"
-          mat-icon-button
-          type="button"
-          aria-haspopup="true"
-          [attr.aria-controls]="shellNavigationId"
-          [attr.aria-label]="menuOpen ? 'Fechar menu' : 'Abrir menu'"
-          [attr.aria-expanded]="menuOpen"
-          (click)="toggleMenu()">
-          <mat-icon fontIcon="menu" aria-hidden="true"></mat-icon>
-        </button>
-      } @else {
-        <a matButton="outlined" routerLink="/login">Entrar</a>
-      }
+      <div class="header-actions">
+        @if (isAuthenticated()) {
+          <button
+            #menuToggle
+            class="nav-menu-toggle"
+            data-testid="nav-menu-toggle"
+            mat-icon-button
+            type="button"
+            aria-haspopup="true"
+            [attr.aria-controls]="shellNavigationId"
+            [attr.aria-label]="menuOpen ? 'Fechar menu' : 'Abrir menu'"
+            [attr.aria-expanded]="menuOpen"
+            (click)="toggleMenu()">
+            <mat-icon fontIcon="menu" aria-hidden="true"></mat-icon>
+          </button>
+        } @else {
+          <a matButton="outlined" routerLink="/login">Entrar</a>
+        }
+      </div>
     </div>
-  </div>
-</header>
+  </header>
 
-@if (isAuthenticated()) {
-  <nav
-    [id]="shellNavigationId"
-    class="nav-menu-drawer"
-    data-testid="nav-menu-drawer"
-    aria-label="Navegação principal"
-    [class.open]="menuOpen"
-    [attr.aria-hidden]="!menuOpen"
-    [attr.inert]="menuOpen ? null : ''">
-    @for (group of visibleNavigationGroups(); track group.label) {
-      <section
-        class="nav-menu-drawer__group"
-        [attr.data-menu-group]="group.label"
-        [attr.aria-labelledby]="navigationGroupLabelId(group)">
-        <strong
-          [id]="navigationGroupLabelId(group)"
-          class="nav-menu-drawer__label">{{ group.label }}</strong>
-        <ul class="nav-menu-drawer__items">
-          @for (item of group.items; track item.label) {
-            <li>
-              <a
-                [routerLink]="item.route"
-                [fragment]="item.fragment"
-                (click)="closeMenu()">{{ item.label }}</a>
-            </li>
-          }
-        </ul>
-      </section>
-    }
-  </nav>
-}
+  @if (isAuthenticated()) {
+    <nav
+      [id]="shellNavigationId"
+      class="nav-menu-drawer"
+      data-testid="nav-menu-drawer"
+      aria-label="Navegação principal"
+      [class.open]="menuOpen"
+      [attr.aria-hidden]="!menuOpen"
+      [attr.inert]="menuOpen ? null : ''">
+      @for (group of visibleNavigationGroups(); track group.label) {
+        <section
+          class="nav-menu-drawer__group"
+          [attr.data-menu-group]="group.label"
+          [attr.aria-labelledby]="navigationGroupLabelId(group)">
+          <strong
+            [id]="navigationGroupLabelId(group)"
+            class="nav-menu-drawer__label">{{ group.label }}</strong>
+          <ul class="nav-menu-drawer__items">
+            @for (item of group.items; track item.label) {
+              <li>
+                <a
+                  [routerLink]="item.route"
+                  [fragment]="item.fragment"
+                  (click)="closeMenu()">{{ item.label }}</a>
+              </li>
+            }
+            @if (group.label === 'Conta') {
+              <li>
+                <button
+                  type="button"
+                  class="nav-menu-drawer__logout"
+                  data-testid="menu-logout"
+                  (click)="logout()">
+                  Sair
+                </button>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+      <p class="nav-menu-drawer__user" data-testid="menu-account-name">{{ displayName() }}</p>
+    </nav>
+  }
 
-<main class="page-content">
-  <router-outlet />
-</main>
+  <main class="page-content" data-testid="shell-page-content">
+    <router-outlet />
+  </main>
+
+  <footer class="main-footer" data-testid="visual-shell-footer">
+    <div class="shell-inner footer-inner">
+      <span>© 2026 Cursos</span>
+      <a href="/openapi" target="_blank" rel="noopener noreferrer">OpenAPI</a>
+    </div>
+  </footer>
+</div>

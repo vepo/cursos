@@ -31,6 +31,37 @@ WHERE c.title = 'Introdução ao Quarkus'
   AND cat.slug IN ('java', 'backend')
 ON CONFLICT DO NOTHING;
 
+-- Course image assets (cover + gallery) — 1x1 PNG
+INSERT INTO tb_course_image_assets (course_id, content_type, filename, size_bytes, content, created_at)
+SELECT c.id, 'image/png', 'cover.png', 70,
+       decode('89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c4944415408d763f8cfc00000000300010005fed4ef0000000049454e44ae426082', 'hex'),
+       NOW()
+FROM tb_courses c
+WHERE c.title = 'Introdução ao Quarkus'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_course_image_assets a
+      WHERE a.course_id = c.id AND a.filename = 'cover.png'
+  );
+
+INSERT INTO tb_course_image_assets (course_id, content_type, filename, size_bytes, content, created_at)
+SELECT c.id, 'image/png', 'gallery-diagram.png', 70,
+       decode('89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de0000000c4944415408d763f8cfc00000000300010005fed4ef0000000049454e44ae426082', 'hex'),
+       NOW()
+FROM tb_courses c
+WHERE c.title = 'Introdução ao Quarkus'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_course_image_assets a
+      WHERE a.course_id = c.id AND a.filename = 'gallery-diagram.png'
+  );
+
+UPDATE tb_courses c
+SET cover_image_asset_id = a.id
+FROM tb_course_image_assets a
+WHERE c.title = 'Introdução ao Quarkus'
+  AND a.course_id = c.id
+  AND a.filename = 'cover.png'
+  AND c.cover_image_asset_id IS NULL;
+
 -- Ordered aulas: markdown, link, and a tiny seeded video for local playback tests
 INSERT INTO tb_course_items (
     course_id, title, item_type, sort_order, markdown_body, created_at, updated_at
@@ -49,6 +80,16 @@ WHERE c.title = 'Introdução ao Quarkus'
       SELECT 1 FROM tb_course_items i
       WHERE i.course_id = c.id AND i.sort_order = item.sort_order
   );
+
+UPDATE tb_course_items i
+SET markdown_body = E'# Bem-vindo\n\nPrimeira **aula** do curso. Conclua para liberar a próxima.\n\n![Diagrama](course-asset:'
+                    || a.id::text || E')'
+FROM tb_courses c
+JOIN tb_course_image_assets a ON a.course_id = c.id AND a.filename = 'gallery-diagram.png'
+WHERE i.course_id = c.id
+  AND c.title = 'Introdução ao Quarkus'
+  AND i.sort_order = 0
+  AND i.markdown_body NOT LIKE '%course-asset:%';
 
 INSERT INTO tb_course_items (
     course_id, title, item_type, sort_order, link_url, link_description, created_at, updated_at
@@ -155,6 +196,34 @@ JOIN tb_courses c ON c.id = e.course_id
 JOIN tb_course_items i ON i.course_id = c.id AND i.sort_order = 0
 WHERE c.title = 'Introdução ao Quarkus'
   AND e.student_passport_user_id = 3
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_item_progress p
+      WHERE p.enrollment_id = e.id AND p.course_item_id = i.id
+  );
+
+-- 5b. CTO fully concluded on Angular course (catalog Concluído + certificate download)
+INSERT INTO tb_enrollments (
+    course_id, student_passport_user_id, student_username, student_name, student_email,
+    status, concluded_at, created_at, updated_at
+)
+SELECT c.id, 2, 'cto-boss', 'CTO Boss', 'cto@passport.vepo.dev',
+       'ENROLLED', NOW(), NOW(), NOW()
+FROM tb_courses c
+WHERE c.title = 'Angular na prática'
+  AND NOT EXISTS (
+      SELECT 1 FROM tb_enrollments e
+      WHERE e.course_id = c.id AND e.student_passport_user_id = 2
+  );
+
+INSERT INTO tb_item_progress (
+    enrollment_id, course_item_id, completed, actor_passport_user_id, updated_at
+)
+SELECT e.id, i.id, TRUE, 2, NOW()
+FROM tb_enrollments e
+JOIN tb_courses c ON c.id = e.course_id
+JOIN tb_course_items i ON i.course_id = c.id
+WHERE c.title = 'Angular na prática'
+  AND e.student_passport_user_id = 2
   AND NOT EXISTS (
       SELECT 1 FROM tb_item_progress p
       WHERE p.enrollment_id = e.id AND p.course_item_id = i.id

@@ -7,7 +7,25 @@
       [class.is-open]="aulasSidebarOpen"
       aria-labelledby="study-aulas-heading">
       <h2 id="study-aulas-heading">Aulas</h2>
+      <div class="study-progress" data-testid="study-progress" aria-label="Progresso do curso">
+        <div class="study-progress__meta">{{ progressLabel() }}</div>
+        <div class="study-progress__track" role="progressbar"
+             [attr.aria-valuenow]="percentComplete"
+             aria-valuemin="0"
+             aria-valuemax="100">
+          <div class="study-progress__fill" [style.width.%]="percentComplete"></div>
+        </div>
+      </div>
       <nav data-testid="aula-tree" aria-label="Lista de aulas">
+        <button
+          type="button"
+          class="aula"
+          data-testid="visao-geral"
+          [class.aula-current]="!selectedAulaId"
+          (click)="openOverview()">
+          <mat-icon class="aula-icon" fontIcon="info" aria-hidden="true"></mat-icon>
+          Visão geral
+        </button>
         @for (aula of aulas; track aula.id) {
           <button
             type="button"
@@ -19,6 +37,7 @@
             [attr.data-aula-state]="aulaState(aula)"
             [attr.aria-disabled]="aula.accessible ? null : 'true'"
             (click)="openAula(aula)">
+            <mat-icon class="aula-icon" [fontIcon]="aulaStateIcon(aula)" aria-hidden="true"></mat-icon>
             {{ aula.title }}
           </button>
         }
@@ -29,7 +48,15 @@
       <header class="page-header">
         <div>
           <a mat-button routerLink="/">Catálogo</a>
-          <h1>{{ course.title }}</h1>
+          <h1>
+            <button
+              type="button"
+              class="course-overview-title"
+              data-testid="course-overview-title"
+              (click)="openOverview()">
+              {{ course.title }}
+            </button>
+          </h1>
         </div>
         <div class="page-actions">
           <button
@@ -51,44 +78,91 @@
         </div>
       </header>
 
-      <section class="course-summary" data-testid="course-summary">
-        <article class="summary-panel card">
-          <h2>Sobre o curso</h2>
-          @if (course.summary) {
-            <p>{{ course.summary }}</p>
-          } @else {
-            <p class="muted">Sem resumo cadastrado.</p>
-          }
-        </article>
-        <article class="summary-panel card">
-          <h2>Sobre o autor</h2>
-          <div class="author-summary">
-            <span class="avatar-initial" aria-hidden="true">{{ teacherInitial() }}</span>
-            <div class="author-summary__body">
-              <strong>{{ course.teacherName || course.teacherUsername }}</strong>
-              @if (course.teacherDescription) {
-                <p>{{ course.teacherDescription }}</p>
+      @if (!selectedAula) {
+        <section class="course-summary" data-testid="course-summary">
+          <article class="summary-panel card">
+            <h2>Sobre o curso</h2>
+            <div class="course-cover" data-testid="course-cover">
+              @if (course.coverImageUrl) {
+                <img [src]="course.coverImageUrl" [alt]="'Capa de ' + (course.title || 'curso')" />
               } @else {
-                <p class="muted">Autor ainda não adicionou uma descrição.</p>
+                <div class="course-cover__fallback" aria-hidden="true">Sem capa</div>
               }
             </div>
-          </div>
-        </article>
-      </section>
+            @if (course.summary) {
+              <p>{{ course.summary }}</p>
+            } @else {
+              <p class="muted">Sem resumo cadastrado.</p>
+            }
+          </article>
+          <article class="summary-panel card">
+            <h2>Sobre o autor</h2>
+            <div class="author-summary">
+              <span class="avatar-initial" aria-hidden="true">{{ teacherInitial() }}</span>
+              <div class="author-summary__body">
+                <strong>{{ course.teacherName || course.teacherUsername }}</strong>
+                @if (course.teacherDescription) {
+                  <p>{{ course.teacherDescription }}</p>
+                } @else {
+                  <p class="muted">Autor ainda não adicionou uma descrição.</p>
+                }
+              </div>
+            </div>
+          </article>
+        </section>
+      }
 
-    @if (selectedAula; as item) {
+    @if (selectedAula && courseConcluded) {
+      <section class="course-finish card" data-testid="course-finish">
+        <h2>Curso concluído</h2>
+        <p>Parabéns! Você concluiu todas as aulas deste curso.</p>
+        <button
+          mat-flat-button
+          class="btn-primary"
+          type="button"
+          data-testid="download-certificate"
+          [disabled]="certificateDownloading"
+          (click)="downloadCertificate()">
+          Baixar certificado
+        </button>
+        @if (detail?.enrolled) {
+          <button
+            mat-stroked-button
+            class="btn-quiet"
+            type="button"
+            data-testid="desfazer-progresso"
+            (click)="rollbackFromFinish()">
+            Desfazer progresso
+          </button>
+        }
+        @if (certificateError) {
+          <p class="error">{{ certificateError }}</p>
+        }
+      </section>
+    } @else if (selectedAula; as item) {
       <article data-testid="aula-content" class="aula-content">
         <header class="aula-header">
           <h2>{{ item.title }}</h2>
           @if (detail?.enrolled) {
-            <button
-              mat-flat-button
-              class="btn-primary"
-              type="button"
-              data-testid="concluir-aula"
-              (click)="completeAula()">
-              Concluir aula
-            </button>
+            @if (isSelectedAulaCompleted()) {
+              <button
+                mat-stroked-button
+                class="btn-quiet"
+                type="button"
+                data-testid="desfazer-progresso"
+                (click)="rollbackAula()">
+                Desfazer progresso
+              </button>
+            } @else {
+              <button
+                mat-flat-button
+                class="btn-primary"
+                type="button"
+                data-testid="concluir-aula"
+                (click)="completeAula()">
+                Concluir aula
+              </button>
+            }
           }
         </header>
         @if (item.itemType === 'MARKDOWN') {

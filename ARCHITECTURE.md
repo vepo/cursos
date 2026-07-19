@@ -46,7 +46,7 @@ dev.vepo.cursos/
 ├── auth/           # JWT validation, security helpers
 ├── identity/       # Local Passport user mirror
 ├── catalog/        # Home catalog sections
-├── course/         # Courses, categories, items
+├── course/         # Courses, items, image gallery (`course.image`), video playback (`course.playback`)
 ├── enrollment/     # Request, approve, direct enroll
 ├── progress/       # Item completion + percentage
 ├── discussion/     # Aula comments, upvotes, moderation
@@ -70,11 +70,13 @@ One per entity; `@ApplicationScoped`; `EntityManager`; `@Transactional` on mutat
 | Service | Responsibility |
 |---------|----------------|
 | `CourseService` | Course CRUD, publish, teacher ownership |
+| `CourseImageAssetService` | Gallery/cover upload, signed tickets, reference-guarded delete |
 | `CourseItemService` | Ordered MARKDOWN/IMAGE/VIDEO items |
 | `CategoryService` | Category CRUD |
 | `CatalogService` | Teaching / enrolled / available-requested sections |
 | `EnrollmentService` | Request, approve, reject, direct enroll |
-| `ProgressService` | Completion, teacher adjust, percentage |
+| `ProgressService` | Completion, cascade rollback, conclusion, percentage |
+| `CertificateService` | On-demand PDF certificate for concluded enrollments |
 | `StudyService` | Sequential aula accessibility, tree state, teacher preview |
 | `CommentService` | Aula comments, upvote toggle, hide/restore |
 | `IdentityService` | Upsert local identity from JWT |
@@ -147,9 +149,23 @@ Base path: `/api`. OpenAPI at `/openapi`.
 | GET | `/media/playback/{courseId}/{itemId}/{resourceId}` | Public Range stream (`206`) with HMAC ticket |
 | GET | `/courses/{id}/study` | Aula tree with completion/accessibility |
 
+### Course images (cover + gallery)
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/courses/{id}/images` | Upload gallery raster (JPEG/PNG/WebP/GIF) |
+| GET | `/courses/{id}/images` | List gallery (teacher or enrolled) |
+| DELETE | `/courses/{id}/images/{assetId}` | Delete asset (blocked if cover or Markdown-referenced) |
+| PUT | `/courses/{id}/cover/{assetId}` | Set optional course cover |
+| DELETE | `/courses/{id}/cover` | Clear cover |
+| POST | `/courses/{id}/images/tickets` | Batch issue signed image URLs |
+| GET | `/media/images/{courseId}/{assetId}` | Public image stream with HMAC ticket |
+
+Markdown embeds use stable `![alt](course-asset:{id})` references (not raw signed URLs). Config also: `cursos.media.max-image-bytes`.
+
 Student item reads, progress updates, and discussions return 403 for a locked aula. The course teacher bypasses the lock.
 
-Config: `cursos.media.max-video-bytes`, `cursos.media.signing-secret` (`CURSOS_MEDIA_SIGNING_SECRET`), `cursos.media.playback-ticket-ttl-seconds`, `cursos.media.range-chunk-bytes`.
+Config: `cursos.media.max-image-bytes`, `cursos.media.max-video-bytes`, `cursos.media.signing-secret` (`CURSOS_MEDIA_SIGNING_SECRET`), `cursos.media.playback-ticket-ttl-seconds`, `cursos.media.range-chunk-bytes`.
 
 ### Enrollment
 
@@ -165,9 +181,12 @@ Config: `cursos.media.max-video-bytes`, `cursos.media.signing-secret` (`CURSOS_M
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/enrollments/{id}/progress/{itemId}` | Student mark |
-| POST | `/enrollments/{id}/progress/{itemId}/adjust` | Teacher adjust |
+| PUT | `/courses/{id}/items/{itemId}/progress` | Mark complete or rollback (`completed:false` cascade-clears later aulas) |
 | GET | `/enrollments/{id}/progress` | Summary + percentage |
+| GET | `/courses/{id}/progress` | Teacher: all enrolled summaries |
+| GET | `/courses/{id}/certificate` | Download PDF when enrollment is concluded |
+
+`completed:false` clears the selected aula and all later item progress; sets/clears `tb_enrollments.concluded_at` when crossing 100%.
 
 ### Aula discussion
 
@@ -207,8 +226,10 @@ Baseline: `V1.0.0__Database_Creation.sql`.
 | `tb_categories` | Category name, sort order |
 | `tb_courses` | Title, description, category, teacher, published |
 | `tb_course_resources` | media `BYTEA`, content type, filename, size |
+| `tb_course_image_assets` | course-owned gallery/cover rasters (`BYTEA`) |
+| `tb_courses.cover_image_asset_id` | optional FK to gallery asset |
 | `tb_course_items` | position, type (`MARKDOWN`/`IMAGE`/`VIDEO`/`LINK`), markdown, `link_url`/`link_description`, resource FK |
-| `tb_enrollments` | course, student, status (REQUESTED/ENROLLED/REJECTED) |
+| `tb_enrollments` | course, student, status (REQUESTED/ENROLLED/REJECTED), optional `concluded_at` |
 | `tb_item_progress` | enrollment, item, completed, adjusted_by_teacher |
 | `tb_comments` | aula author/content plus hide/moderation audit |
 | `tb_comment_upvotes` | unique comment/voter upvote |
@@ -222,8 +243,8 @@ Progress: `round(100 * completedItems / totalItems)`.
 |-------|---------|
 | `/` | Catalog home (**Ensinando**, **Matriculado**, **Disponível / Solicitado**) |
 | `/account` | Minha conta (profile, author description, change password) |
-| `/courses/:courseId` | Study shell |
-| `/courses/:courseId/lessons/:itemId` | Selected aula |
+| `/courses/:courseId` | Study overview: **Sobre o curso** + **Sobre o autor**; does not auto-open an aula |
+| `/courses/:courseId/lessons/:itemId` | Selected aula (overview panels hidden) |
 | `/teacher` | Teacher's courses |
 | `/teacher/courses/new` | Create course |
 | `/teacher/courses/:courseId/edit` | Two-pane teacher editor (unsaved-changes guard) |
@@ -237,6 +258,7 @@ Progress: `round(100 * completedItems / totalItems)`.
 - The dark-only GitHub-dark palette is defined as CSS custom properties in `styles.scss`: near-black header/sidebar, `#0d1117` main, `#161b22` surfaces, `#30363d` borders, `#58a6ff` links, `#238636` primary actions, danger red.
 - `AppComponent` owns the single persistent header and authenticated navigation drawer. The drawer is right-anchored, closed by default at every breakpoint, role-filters **Admin**, and closes on toggle, leaf navigation, or Escape. On mobile it uses the full viewport width.
 - Catalog, study, teacher home, and course editor use the shared two-column shell classes. Sidebars hold category filters, the aula tree, teaching courses, or editor items respectively.
+- In study, `/courses/:id` is the **Visão geral** overview (**Sobre o curso** / **Sobre o autor**). Lesson routes hide those panels. Completing an aula advances to the next lesson route; the final aula remains selected.
 - Course edit, students, progress, and category administration render page titles/actions inside main and do not add nested `mat-toolbar` chrome.
 - The menu has at most two levels: **Aprender**, **Ensinar**, **Conta**, **Admin**. Header display name links to **Minha conta**. Unauthenticated users see **Entrar** instead of the authenticated drawer controls.
 

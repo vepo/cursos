@@ -49,6 +49,27 @@ public class ItemProgressRepository {
     }
 
     @Transactional
+    public int clearCompletedAfterSortOrder(long enrollmentId, int afterSortOrder, long actorPassportUserId) {
+        var now = java.time.Instant.now();
+        int updated = entityManager.createQuery("""
+                                                UPDATE ItemProgress p
+                                                SET p.completed = false,
+                                                    p.actorPassportUserId = :actorId,
+                                                    p.updatedAt = :updatedAt
+                                                WHERE p.enrollment.id = :enrollmentId
+                                                  AND p.completed = true
+                                                  AND p.courseItem.sortOrder > :afterSortOrder
+                                                """)
+                                   .setParameter("enrollmentId", enrollmentId)
+                                   .setParameter("afterSortOrder", afterSortOrder)
+                                   .setParameter("actorId", actorPassportUserId)
+                                   .setParameter("updatedAt", now)
+                                   .executeUpdate();
+        entityManager.flush();
+        return updated;
+    }
+
+    @Transactional
     public ItemProgress save(ItemProgress progress) {
         entityManager.persist(progress);
         return progress;

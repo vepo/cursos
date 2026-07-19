@@ -6,9 +6,11 @@ import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/route
 import { of } from 'rxjs';
 
 import { CategoriesApi } from '../../generated/api/categories.service';
+import { CourseImagesApi } from '../../generated/api/courseImages.service';
 import { CourseItemsApi } from '../../generated/api/courseItems.service';
 import { CoursesApi } from '../../generated/api/courses.service';
 import { GitApi } from '../../generated/api/git.service';
+import { ConfirmationService } from '../../services/confirmation.service';
 import {
   VISUAL_SHELL_LAYOUT,
   VISUAL_SHELL_TOKENS,
@@ -64,11 +66,21 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
       'createMarkdownItem', 'updateMarkdownItem', 'createLinkItem', 'updateLinkItem',
       'uploadMediaItem', 'deleteCourseItem', 'reorderCourseItems'
     ]);
+    const courseImagesApi = jasmine.createSpyObj('CourseImagesApi', {
+      listCourseImages: of([]),
+      uploadCourseImage: of({ id: 1, signedUrl: '/api/media/images/1/1' }),
+      setCourseCover: of({ id: 10, coverImageAssetId: 1, coverImageUrl: '/api/media/images/10/1' }),
+      clearCourseCover: of({ id: 10, coverImageAssetId: null }),
+      deleteCourseImage: of(null)
+    });
     const gitApi = jasmine.createSpyObj('GitApi', {
       getCourseGitStatus: of({ status: 'IDLE', remoteUrl: '', defaultBranch: 'main' }),
       linkCourseGit: of({ status: 'IDLE' }),
       syncCourseGit: of({ status: 'IDLE' })
     });
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(false));
+    confirmation.confirmOrTrue.and.callFake((needs: boolean) => of(!needs));
 
     await TestBed.configureTestingModule({
       imports: [CourseEditComponent, NoopAnimationsModule],
@@ -79,7 +91,9 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CategoriesApi, useValue: categoriesApi },
         { provide: CourseItemsApi, useValue: courseItemsApi },
+        { provide: CourseImagesApi, useValue: courseImagesApi },
         { provide: GitApi, useValue: gitApi },
+        { provide: ConfirmationService, useValue: confirmation },
         {
           provide: ActivatedRoute,
           useValue: {
@@ -152,11 +166,14 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
 
   it('shouldWarnWhenLeavingDirtyEditor', () => {
     const component = fixture.componentInstance;
+    const confirmation = TestBed.inject(ConfirmationService) as jasmine.SpyObj<ConfirmationService>;
     component.title = 'Changed';
     component.markDirty();
-    spyOn(window, 'confirm').and.returnValue(false);
-    expect(component.canDeactivate()).toBeFalse();
-    expect(window.confirm).toHaveBeenCalled();
+    confirmation.confirm.and.returnValue(of(false));
+    const result = component.canDeactivate();
+    expect(result).toBeInstanceOf(Object);
+    (result as import('rxjs').Observable<boolean>).subscribe(ok => expect(ok).toBeFalse());
+    expect(confirmation.confirm).toHaveBeenCalled();
   });
 
   it('shouldExposeItemTypeSelectorForNewItems', () => {

@@ -1,20 +1,25 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { Observable } from 'rxjs';
 
 import { CategoriesApi } from '../../generated/api/categories.service';
+import { CourseImagesApi } from '../../generated/api/courseImages.service';
 import { CourseItemsApi } from '../../generated/api/courseItems.service';
 import { CoursesApi } from '../../generated/api/courses.service';
 import { GitApi } from '../../generated/api/git.service';
 import { CategoryResponse } from '../../generated/model/categoryResponse';
 import { CourseDetailResponse } from '../../generated/model/courseDetailResponse';
 import { CourseGitStatusResponse } from '../../generated/model/courseGitStatusResponse';
+import { CourseImageAssetResponse } from '../../generated/model/courseImageAssetResponse';
 import { CourseItemResponse } from '../../generated/model/courseItemResponse';
 import { CourseItemType } from '../../generated/model/courseItemType';
+import { ConfirmationService } from '../../services/confirmation.service';
 import { DirtyComponent } from '../../services/unsaved-changes.guard';
 
 type EditorSelection = 'details' | 'new-item' | number;
@@ -28,6 +33,7 @@ type ItemEditorType = Extract<CourseItemType, 'MARKDOWN' | 'LINK' | 'VIDEO'>;
     FormsModule,
     RouterLink,
     MatButtonModule,
+    MatDialogModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule
@@ -39,7 +45,12 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   private readonly coursesApi = inject(CoursesApi);
   private readonly categoriesApi = inject(CategoriesApi);
   private readonly courseItemsApi = inject(CourseItemsApi);
+  private readonly courseImagesApi = inject(CourseImagesApi);
   private readonly gitApi = inject(GitApi);
+  private readonly confirmation = inject(ConfirmationService);
+
+  @ViewChild('markdownBody')
+  private readonly markdownBody?: ElementRef<HTMLTextAreaElement>;
 
   isNew = false;
   courseId = 0;
@@ -49,6 +60,13 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   categories: CategoryResponse[] = [];
   detail: CourseDetailResponse | null = null;
   items: CourseItemResponse[] = [];
+  gallery: CourseImageAssetResponse[] = [];
+  selectedGalleryAssetId: number | null = null;
+  galleryAltText = '';
+  galleryUploadPending = false;
+  galleryError = '';
+  coverImageUrl: string | null = null;
+  coverImageAssetId: number | null = null;
   selection: EditorSelection = 'details';
   itemType: ItemEditorType = 'MARKDOWN';
   itemTitle = '';
@@ -63,6 +81,7 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   gitBranch = 'main';
   gitStatus: CourseGitStatusResponse | null = null;
   message = '';
+  reorderPending = false;
   dirty = false;
   private savedSnapshot = '';
 
@@ -86,11 +105,17 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     }
   }
 
-  canDeactivate(): boolean {
+  canDeactivate(): boolean | Observable<boolean> {
     if (!this.dirty) {
       return true;
     }
-    return window.confirm('Há alterações não salvas. Deseja sair mesmo assim?');
+    return this.confirmation.confirm({
+      title: 'Alterações não salvas',
+      message: 'Há alterações não salvas. Deseja sair mesmo assim?',
+      confirmLabel: 'Sair',
+      cancelLabel: 'Continuar editando',
+      destructive: true
+    });
   }
 
   markDirty(): void {
@@ -98,39 +123,51 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   }
 
   selectDetails(): void {
-    if (!this.confirmLeaveSelection()) {
-      return;
-    }
-    this.selection = 'details';
-    this.applyDetailsToForm();
-    this.captureSnapshot();
+    this.confirmLeaveSelection().subscribe(ok => {
+      if (!ok) {
+        return;
+      }
+      this.selection = 'details';
+      this.applyDetailsToForm();
+      this.captureSnapshot();
+    });
   }
 
   selectItem(item: CourseItemResponse): void {
-    if (!item.id || !this.confirmLeaveSelection()) {
+    if (!item.id) {
       return;
     }
-    this.selection = item.id;
-    this.applyItemToForm(item);
-    this.captureSnapshot();
+    this.confirmLeaveSelection().subscribe(ok => {
+      if (!ok) {
+        return;
+      }
+      this.selection = item.id!;
+      this.applyItemToForm(item);
+      this.captureSnapshot();
+    });
   }
 
   selectNewItem(): void {
-    if (!this.confirmLeaveSelection()) {
-      return;
-    }
-    this.selection = 'new-item';
-    this.resetItemForm();
-    this.captureSnapshot();
+    this.confirmLeaveSelection().subscribe(ok => {
+      if (!ok) {
+        return;
+      }
+      this.selection = 'new-item';
+      this.resetItemForm();
+      this.captureSnapshot();
+    });
   }
 
-  isSelected(target: EditorSelection): boolean {
-    return this.selection === target;
+  isSelected(value: EditorSelection): boolean {
+    return this.selection === value;
   }
 
-  isExistingVideoItem(): boolean {
-    return typeof this.selection === 'number'
-      && this.items.find(item => item.id === this.selection)?.itemType === 'VIDEO';
+  isPublished(): boolean {
+    return this.detail?.course?.status === 'PUBLISHED';
+  }
+
+  statusLabel(): string {
+    return this.isPublished() ? 'Publicado' : 'Rascunho';
   }
 
   isExistingLinkItem(): boolean {
@@ -138,18 +175,32 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       && this.items.find(item => item.id === this.selection)?.itemType === 'LINK';
   }
 
-  isExistingMarkdownItem(): boolean {
+  isExistingVideoItem(): boolean {
     return typeof this.selection === 'number'
-      && this.items.find(item => item.id === this.selection)?.itemType === 'MARKDOWN';
+      && this.items.find(item => item.id === this.selection)?.itemType === 'VIDEO';
   }
 
-  statusLabel(): string {
-    const status = this.detail?.course?.status;
-    return status === 'PUBLISHED' ? 'Publicado' : 'Rascunho';
+  isMarkdownEditor(): boolean {
+    if (this.selection === 'new-item') {
+      return this.itemType === 'MARKDOWN';
+    }
+    if (typeof this.selection !== 'number') {
+      return false;
+    }
+    return this.items.find(item => item.id === this.selection)?.itemType === 'MARKDOWN';
   }
 
-  isPublished(): boolean {
-    return this.detail?.course?.status === 'PUBLISHED';
+  get mediaFileSizeLabel(): string {
+    if (!this.mediaFileSize) {
+      return '';
+    }
+    if (this.mediaFileSize < 1024) {
+      return `${this.mediaFileSize} B`;
+    }
+    if (this.mediaFileSize < 1024 * 1024) {
+      return `${(this.mediaFileSize / 1024).toFixed(1)} KB`;
+    }
+    return `${(this.mediaFileSize / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   onMediaSelected(event: Event): void {
@@ -162,31 +213,27 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     this.markDirty();
   }
 
-  get mediaFileSizeLabel(): string {
-    if (this.mediaFileSize <= 0) {
-      return '0 B';
-    }
-    const units = ['B', 'KiB', 'MiB', 'GiB'];
-    let size = this.mediaFileSize;
-    let unit = 0;
-    while (size >= 1024 && unit < units.length - 1) {
-      size /= 1024;
-      unit += 1;
-    }
-    const rounded = unit === 0 ? `${Math.round(size)}` : size.toFixed(1);
-    return `${rounded} ${units[unit]}`;
+  canMoveUp(item: CourseItemResponse): boolean {
+    const index = this.items.findIndex(candidate => candidate.id === item.id);
+    return index > 0 && !this.reorderPending;
+  }
+
+  canMoveDown(item: CourseItemResponse): boolean {
+    const index = this.items.findIndex(candidate => candidate.id === item.id);
+    return index >= 0 && index < this.items.length - 1 && !this.reorderPending;
   }
 
   load(): void {
     this.coursesApi.findCourse(this.courseId).subscribe(detail => {
       this.detail = detail;
-      this.items = [...(detail.items ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-      if (this.selection === 'details' || this.isNew) {
-        this.applyDetailsToForm();
-      } else if (typeof this.selection === 'number') {
-        const item = this.items.find(candidate => candidate.id === this.selection);
-        if (item) {
-          this.applyItemToForm(item);
+      this.items = detail.items ?? [];
+      this.applyDetailsToForm();
+      this.coverImageAssetId = detail.course?.coverImageAssetId ?? null;
+      this.coverImageUrl = detail.course?.coverImageUrl ?? null;
+      if (typeof this.selection === 'number') {
+        const selected = this.items.find(item => item.id === this.selection);
+        if (selected) {
+          this.applyItemToForm(selected);
         } else {
           this.selection = 'details';
           this.applyDetailsToForm();
@@ -194,13 +241,23 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       }
       this.captureSnapshot();
     });
-    this.gitApi.getCourseGitStatus(this.courseId).subscribe({
-      next: status => {
-        this.gitStatus = status;
-        this.gitUrl = status.remoteUrl ?? '';
-        this.gitBranch = status.defaultBranch ?? 'main';
+    this.gitApi.getCourseGitStatus(this.courseId).subscribe(status => {
+      this.gitStatus = status;
+      this.gitUrl = status.remoteUrl ?? this.gitUrl;
+      this.gitBranch = status.defaultBranch ?? this.gitBranch;
+    });
+    this.reloadGallery();
+  }
+
+  reloadGallery(): void {
+    this.courseImagesApi.listCourseImages(this.courseId).subscribe({
+      next: images => {
+        this.gallery = images ?? [];
+        this.galleryError = '';
       },
-      error: () => this.gitStatus = null
+      error: () => {
+        this.galleryError = 'Não foi possível carregar a galeria.';
+      }
     });
   }
 
@@ -231,38 +288,183 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   }
 
   moveItem(item: CourseItemResponse, direction: -1 | 1): void {
-    if (!item.id || this.dirty && !this.confirmLeaveSelection()) {
+    if (!item.id || this.reorderPending) {
       return;
     }
-    const index = this.items.findIndex(candidate => candidate.id === item.id);
-    const swap = index + direction;
-    if (index < 0 || swap < 0 || swap >= this.items.length) {
+    if (this.dirty) {
+      this.confirmLeaveSelection().subscribe(ok => {
+        if (ok) {
+          this.performMove(item, direction);
+        }
+      });
       return;
     }
-    const ordered = [...this.items];
-    const [removed] = ordered.splice(index, 1);
-    ordered.splice(swap, 0, removed);
-    const itemIds = ordered.map(entry => entry.id!).filter(Boolean);
-    this.courseItemsApi.reorderCourseItems(this.courseId, { itemIds }).subscribe(items => {
-      this.items = items ?? ordered;
-      this.message = 'Ordem atualizada';
-    });
+    this.performMove(item, direction);
   }
 
   deleteItem(item: CourseItemResponse): void {
     if (!item.id) {
       return;
     }
-    if (!window.confirm(`Excluir o item "${item.title}"?`)) {
+    if (this.dirty && this.selection !== item.id) {
+      this.confirmation.confirm({
+        title: 'Alterações não salvas',
+        message: 'Há alterações não salvas no editor atual. Descartar e excluir o item?',
+        confirmLabel: 'Excluir',
+        cancelLabel: 'Cancelar',
+        destructive: true
+      }).subscribe(ok => {
+        if (ok) {
+          this.confirmAndDeleteItem(item);
+        }
+      });
       return;
     }
-    this.courseItemsApi.deleteCourseItem(this.courseId, item.id).subscribe(() => {
-      if (this.selection === item.id) {
-        this.selection = 'details';
+    this.confirmAndDeleteItem(item);
+  }
+
+  onCoverFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    this.courseImagesApi.uploadCourseImage(this.courseId, file).subscribe({
+      next: asset => {
+        if (!asset.id) {
+          return;
+        }
+        this.courseImagesApi.setCourseCover(this.courseId, asset.id).subscribe(course => {
+          this.coverImageAssetId = course.coverImageAssetId ?? asset.id!;
+          this.coverImageUrl = course.coverImageUrl ?? asset.signedUrl ?? null;
+          this.message = 'Capa atualizada';
+          this.reloadGallery();
+        });
+      },
+      error: () => {
+        this.message = 'Falha ao enviar a capa.';
       }
-      this.message = 'Item excluído';
-      this.load();
     });
+    input.value = '';
+  }
+
+  setCoverFromGallery(asset: CourseImageAssetResponse): void {
+    if (!asset.id) {
+      return;
+    }
+    this.courseImagesApi.setCourseCover(this.courseId, asset.id).subscribe(course => {
+      this.coverImageAssetId = course.coverImageAssetId ?? asset.id!;
+      this.coverImageUrl = course.coverImageUrl ?? asset.signedUrl ?? null;
+      this.message = 'Capa atualizada';
+      this.reloadGallery();
+    });
+  }
+
+  clearCover(): void {
+    this.courseImagesApi.clearCourseCover(this.courseId).subscribe(() => {
+      this.coverImageAssetId = null;
+      this.coverImageUrl = null;
+      this.message = 'Capa removida';
+      this.reloadGallery();
+    });
+  }
+
+  onGalleryFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    this.galleryUploadPending = true;
+    this.galleryError = '';
+    this.courseImagesApi.uploadCourseImage(this.courseId, file).subscribe({
+      next: asset => {
+        this.galleryUploadPending = false;
+        this.reloadGallery();
+        this.selectedGalleryAssetId = asset.id ?? null;
+        this.message = 'Imagem adicionada à galeria';
+      },
+      error: () => {
+        this.galleryUploadPending = false;
+        this.galleryError = 'Falha ao enviar a imagem.';
+      }
+    });
+    input.value = '';
+  }
+
+  selectGalleryAsset(asset: CourseImageAssetResponse): void {
+    this.selectedGalleryAssetId = asset.id ?? null;
+  }
+
+  selectedGalleryAsset(): CourseImageAssetResponse | null {
+    if (this.selectedGalleryAssetId == null) {
+      return null;
+    }
+    return this.gallery.find(asset => asset.id === this.selectedGalleryAssetId) ?? null;
+  }
+
+  insertSelectedGalleryImage(): void {
+    if (!this.selectedGalleryAssetId || !this.isMarkdownEditor()) {
+      return;
+    }
+    const alt = (this.galleryAltText || 'Imagem').trim();
+    const snippet = `![${alt}](course-asset:${this.selectedGalleryAssetId})`;
+    const textarea = this.markdownBody?.nativeElement;
+    if (!textarea) {
+      this.itemBody = `${this.itemBody}${this.itemBody ? '\n\n' : ''}${snippet}`;
+      this.markDirty();
+      return;
+    }
+    const start = textarea.selectionStart ?? this.itemBody.length;
+    const end = textarea.selectionEnd ?? start;
+    this.itemBody = `${this.itemBody.slice(0, start)}${snippet}${this.itemBody.slice(end)}`;
+    this.markDirty();
+    queueMicrotask(() => {
+      textarea.focus();
+      const cursor = start + snippet.length;
+      textarea.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  deleteGalleryAsset(asset: CourseImageAssetResponse): void {
+    if (!asset.id) {
+      return;
+    }
+    this.confirmation.confirm({
+      title: 'Excluir imagem',
+      message: `Excluir "${asset.filename}" da galeria?`,
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      destructive: true
+    }).subscribe(ok => {
+      if (!ok) {
+        return;
+      }
+      this.courseImagesApi.deleteCourseImage(this.courseId, asset.id!).subscribe({
+        next: () => {
+          if (this.selectedGalleryAssetId === asset.id) {
+            this.selectedGalleryAssetId = null;
+          }
+          this.message = 'Imagem excluída';
+          this.reloadGallery();
+        },
+        error: err => {
+          const status = err?.status;
+          this.galleryError = status === 409
+            ? 'Não é possível excluir: a imagem é capa ou está referenciada no Markdown.'
+            : 'Falha ao excluir a imagem.';
+        }
+      });
+    });
+  }
+
+  isAssetReferenced(assetId: number | undefined): boolean {
+    if (!assetId) {
+      return false;
+    }
+    const needle = `course-asset:${assetId}`;
+    return this.items.some(item => (item.markdownBody ?? '').includes(needle))
+      || this.itemBody.includes(needle);
   }
 
   linkGit(): void {
@@ -281,6 +483,54 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       this.gitStatus = status;
       this.message = 'Sincronização concluída';
       this.load();
+    });
+  }
+
+  private performMove(item: CourseItemResponse, direction: -1 | 1): void {
+    const index = this.items.findIndex(candidate => candidate.id === item.id);
+    const swap = index + direction;
+    if (index < 0 || swap < 0 || swap >= this.items.length) {
+      return;
+    }
+    const previous = [...this.items];
+    const ordered = [...this.items];
+    const [removed] = ordered.splice(index, 1);
+    ordered.splice(swap, 0, removed);
+    this.items = ordered;
+    this.reorderPending = true;
+    const itemIds = ordered.map(entry => entry.id!).filter(Boolean);
+    this.courseItemsApi.reorderCourseItems(this.courseId, { itemIds }).subscribe({
+      next: items => {
+        this.items = items ?? ordered;
+        this.reorderPending = false;
+        this.message = 'Ordem atualizada';
+      },
+      error: () => {
+        this.items = previous;
+        this.reorderPending = false;
+        this.message = 'Não foi possível reordenar os itens.';
+      }
+    });
+  }
+
+  private confirmAndDeleteItem(item: CourseItemResponse): void {
+    this.confirmation.confirm({
+      title: 'Excluir item',
+      message: `Excluir o item "${item.title}"?`,
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      destructive: true
+    }).subscribe(ok => {
+      if (!ok || !item.id) {
+        return;
+      }
+      this.courseItemsApi.deleteCourseItem(this.courseId, item.id).subscribe(() => {
+        if (this.selection === item.id) {
+          this.selection = 'details';
+        }
+        this.message = 'Item excluído';
+        this.load();
+      });
     });
   }
 
@@ -388,11 +638,14 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     this.mediaFileSize = 0;
   }
 
-  private confirmLeaveSelection(): boolean {
-    if (!this.dirty) {
-      return true;
-    }
-    return window.confirm('Há alterações não salvas. Descartar e continuar?');
+  private confirmLeaveSelection(): Observable<boolean> {
+    return this.confirmation.confirmOrTrue(this.dirty, {
+      title: 'Alterações não salvas',
+      message: 'Há alterações não salvas. Descartar e continuar?',
+      confirmLabel: 'Descartar',
+      cancelLabel: 'Continuar editando',
+      destructive: true
+    });
   }
 
   private captureSnapshot(): void {

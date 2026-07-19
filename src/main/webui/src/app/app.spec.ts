@@ -491,7 +491,7 @@ describe('Visual shell header (T22)', () => {
       .toBeTrue();
   });
 
-  it('shouldKeepAuthenticatedUserAndSairInHeader', async () => {
+  it('shouldKeepAuthenticatedAccountAndSairInsideMenuContaSection', async () => {
     const fixture = await createApp(true);
     const header = fixture.nativeElement.querySelector(
       '[data-testid="visual-shell-header"], header.main-header'
@@ -501,13 +501,57 @@ describe('Visual shell header (T22)', () => {
       return;
     }
 
-    expect(header.querySelector('[data-testid="account-link"]')).not.toBeNull();
-    expect(header.textContent).toMatch(/Ana|ana@cursos\.dev/);
+    expect(header.querySelector('[data-testid="account-link"]'))
+      .withContext('account link must not remain in header')
+      .toBeNull();
+    expect(header.textContent).not.toMatch(/\bSair\b/);
 
-    const sair = Array.from(header.querySelectorAll('button')).find(button =>
-      /sair/i.test(button.textContent ?? '')
-    );
-    expect(sair).withContext('Sair control').toBeTruthy();
+    const { panel } = openMenuPanel(fixture);
+    expect(panel.querySelector('[data-testid="menu-account-name"]')?.textContent)
+      .toMatch(/Ana|ana@cursos\.dev/);
+    expect(panel.querySelector('[data-menu-group="Conta"]')).not.toBeNull();
+    expect(panel.querySelector('[data-testid="menu-logout"]')?.textContent)
+      .toMatch(/Sair/i);
+  });
+
+  it('shouldExposePersistentFooterWithOpenApiLink', async () => {
+    const fixture = await createApp(true);
+    const root = fixture.nativeElement as HTMLElement;
+    const footer = root.querySelector(
+      'footer[data-testid="visual-shell-footer"], footer.main-footer'
+    ) as HTMLElement | null;
+    expect(footer).withContext('shell footer').not.toBeNull();
+    if (!footer) {
+      return;
+    }
+
+    expect(footer.textContent).toMatch(/Cursos/);
+    const openApi = footer.querySelector('a[href="/openapi"]') as HTMLAnchorElement | null;
+    expect(openApi).withContext('OpenAPI footer link').not.toBeNull();
+  });
+
+  it('shouldScrollOnlyPageContentInsideFixedShell', async () => {
+    const fixture = await createApp(true);
+    const root = fixture.nativeElement.querySelector(
+      '[data-testid="app-shell-root"]'
+    ) as HTMLElement | null;
+    const content = fixture.nativeElement.querySelector(
+      '[data-testid="shell-page-content"], main.page-content'
+    ) as HTMLElement | null;
+    expect(root).not.toBeNull();
+    expect(content).not.toBeNull();
+    if (!root || !content) {
+      return;
+    }
+
+    const rootStyle = getComputedStyle(root);
+    const contentStyle = getComputedStyle(content);
+    expect(rootStyle.overflow === 'hidden' || rootStyle.overflowY === 'hidden')
+      .withContext('shell root does not document-scroll')
+      .toBeTrue();
+    expect(contentStyle.overflow === 'auto' || contentStyle.overflowY === 'auto')
+      .withContext('page content is the scroll container')
+      .toBeTrue();
   });
 
   it('shouldPlaceSingleMenuIconToggleLastInHeaderInteractiveOrder', async () => {
@@ -639,11 +683,13 @@ describe('App shell landmarks and a11y (T27)', () => {
       || cssColorEquals(style.color, VISUAL_SHELL_TOKENS['--color-text-muted'])
     ).withContext('header text uses primary/muted light tokens on black').toBeTrue();
 
-    const account = header.querySelector('.user-account-link, [data-testid="account-link"]') as HTMLElement | null;
-    if (account) {
-      expect(cssColorEquals(getComputedStyle(account).color, VISUAL_SHELL_TOKENS['--color-text-muted'])
-        || cssColorEquals(getComputedStyle(account).color, VISUAL_SHELL_TOKENS['--color-text']))
-        .withContext('account link uses readable text token on header')
+    const footer = fixture.nativeElement.querySelector(
+      '[data-testid="visual-shell-footer"]'
+    ) as HTMLElement | null;
+    expect(footer).withContext('footer landmark for contrast check').not.toBeNull();
+    if (footer) {
+      expect(cssColorEquals(getComputedStyle(footer).backgroundColor, VISUAL_SHELL_TOKENS['--color-header']))
+        .withContext('footer uses black shell token')
         .toBeTrue();
     }
   });

@@ -56,6 +56,10 @@ public class CourseItemRepository {
         return item;
     }
 
+    public void flush() {
+        entityManager.flush();
+    }
+
     @Transactional
     public void delete(CourseItem item) {
         entityManager.remove(entityManager.contains(item) ? item : entityManager.merge(item));

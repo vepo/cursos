@@ -60,6 +60,10 @@ const catalogPayload = {
       title: 'Curso matriculado',
       summary: 'OK',
       enrollmentStatus: 'ENROLLED',
+      concluded: true,
+      completedItems: 4,
+      totalItems: 4,
+      percentComplete: 100,
       categories: []
     }
   ],
@@ -142,6 +146,16 @@ describe('HomeComponent student catalog (T13)', () => {
     expect(text).toMatch(/Disponível/i);
     expect(text).toContain('Curso matriculado');
     expect(text).toContain('Curso disponível');
+  });
+
+  it('shouldShowConcluidoBadgeOnCompletedEnrolledCourse', () => {
+    const badge = fixture.nativeElement.querySelector('[data-testid="course-concluded"]') as HTMLElement | null;
+    const progress = fixture.nativeElement.querySelector('[data-testid="course-progress"]') as HTMLElement | null;
+
+    expect(badge).withContext('Concluído badge must appear on concluded enrolled cards').not.toBeNull();
+    expect((badge?.textContent ?? '').trim()).toBe('Concluído');
+    expect(progress?.textContent).toContain('4/4');
+    expect(progress?.textContent).toMatch(/100/);
   });
 
   it('shouldUseCanonicalCatalogSectionAndEnrollmentLabels', () => {

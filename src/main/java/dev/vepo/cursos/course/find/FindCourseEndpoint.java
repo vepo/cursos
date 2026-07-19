@@ -9,6 +9,7 @@ import dev.vepo.cursos.course.CourseItemResponse;
 import dev.vepo.cursos.course.CourseResponse;
 import dev.vepo.cursos.course.CourseService;
 import dev.vepo.cursos.course.CourseStatus;
+import dev.vepo.cursos.course.image.CourseImageAssetService;
 import dev.vepo.cursos.enrollment.EnrollmentRepository;
 import dev.vepo.cursos.enrollment.EnrollmentStatus;
 import dev.vepo.cursos.identity.AuthorProfileService;
@@ -36,16 +37,19 @@ public class FindCourseEndpoint {
     private final CurrentPassportUser currentPassportUser;
     private final EnrollmentRepository enrollmentRepository;
     private final AuthorProfileService authorProfileService;
+    private final CourseImageAssetService courseImageAssetService;
 
     @Inject
     public FindCourseEndpoint(CourseService courseService,
                               CurrentPassportUser currentPassportUser,
                               EnrollmentRepository enrollmentRepository,
-                              AuthorProfileService authorProfileService) {
+                              AuthorProfileService authorProfileService,
+                              CourseImageAssetService courseImageAssetService) {
         this.courseService = courseService;
         this.currentPassportUser = currentPassportUser;
         this.enrollmentRepository = enrollmentRepository;
         this.authorProfileService = authorProfileService;
+        this.courseImageAssetService = courseImageAssetService;
     }
 
     @GET
@@ -67,7 +71,10 @@ public class FindCourseEndpoint {
                                                   course.getTeacherUsername(),
                                                   course.getTeacherName());
         var items = courseService.listItems(courseId).stream().map(CourseItemResponse::load).toList();
-        return new CourseDetailResponse(CourseResponse.load(course, author), items, teacher, enrolled);
+        return new CourseDetailResponse(CourseResponse.load(course, author, courseImageAssetService.signedUrlOrNull(course)),
+                                        items,
+                                        teacher,
+                                        enrolled);
     }
 
     public record CourseDetailResponse(CourseResponse course, List<CourseItemResponse> items, boolean teaching, boolean enrolled) {}

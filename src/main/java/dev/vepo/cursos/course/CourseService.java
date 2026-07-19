@@ -172,13 +172,26 @@ public class CourseService {
     public List<CourseItem> reorder(long courseId, List<Long> itemIds, PassportUser teacher) {
         requireTaughtBy(courseId, teacher);
         var items = courseItemRepository.listByCourse(courseId);
-        if (itemIds.size() != items.size() || !items.stream().map(CourseItem::getId).allMatch(itemIds::contains)) {
+        if (itemIds == null || itemIds.isEmpty()) {
             throw CursosException.badRequest("Reorder list must include every course item exactly once");
         }
+        var distinctIds = itemIds.stream().distinct().toList();
+        if (distinctIds.size() != itemIds.size()) {
+            throw CursosException.badRequest("Reorder list must not contain duplicate item ids");
+        }
+        var existingIds = items.stream().map(CourseItem::getId).collect(java.util.stream.Collectors.toSet());
+        if (itemIds.size() != items.size() || !existingIds.containsAll(itemIds)) {
+            throw CursosException.badRequest("Reorder list must include every course item exactly once");
+        }
+        // Two-phase update avoids unique (course_id, sort_order) collisions on adjacent
+        // swaps.
+        for (int i = 0; i < items.size(); i++) {
+            items.get(i).reorder(-(i + 1));
+        }
+        courseItemRepository.flush();
+        var byId = items.stream().collect(java.util.stream.Collectors.toMap(CourseItem::getId, item -> item));
         for (int i = 0; i < itemIds.size(); i++) {
-            var id = itemIds.get(i);
-            var item = items.stream().filter(it -> it.getId().equals(id)).findFirst().orElseThrow();
-            item.reorder(i);
+            byId.get(itemIds.get(i)).reorder(i);
         }
         return courseItemRepository.listByCourse(courseId);
     }

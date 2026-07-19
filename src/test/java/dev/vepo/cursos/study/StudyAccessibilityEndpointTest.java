@@ -172,7 +172,7 @@ class StudyAccessibilityEndpointTest {
                .statusCode(HttpStatus.SC_OK)
                .body("items[0].completed", equalTo(false))
                .body("items[0].accessible", equalTo(true))
-               .body("items[1].completed", equalTo(true))
+               .body("items[1].completed", equalTo(false))
                .body("items[1].accessible", equalTo(false))
                .body("items[2].completed", equalTo(false))
                .body("items[2].accessible", equalTo(false));

@@ -3,8 +3,10 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { Observable } from 'rxjs';
+import { CourseImagesApi } from '../../generated/api/courseImages.service';
 import { CourseItemsApi } from '../../generated/api/courseItems.service';
 import { CoursesApi } from '../../generated/api/courses.service';
 import { DiscussionApi } from '../../generated/api/discussion.service';
@@ -15,7 +17,8 @@ import { CourseDetailResponse } from '../../generated/model/courseDetailResponse
 import { CourseItemResponse } from '../../generated/model/courseItemResponse';
 import { StudyItemResponse } from '../../generated/model/studyItemResponse';
 import { AuthService } from '../../services/auth.service';
-import { renderCourseMarkdown } from './course-markdown.renderer';
+import { ConfirmationService } from '../../services/confirmation.service';
+import { extractCourseAssetIds, renderCourseMarkdown } from './course-markdown.renderer';
 
 @Component({
   selector: 'app-course-view',
@@ -26,6 +29,7 @@ import { renderCourseMarkdown } from './course-markdown.renderer';
     FormsModule,
     MatButtonModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule
   ]
 })
@@ -34,10 +38,12 @@ export class CourseViewComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly coursesApi = inject(CoursesApi);
   private readonly courseItemsApi = inject(CourseItemsApi);
+  private readonly courseImagesApi = inject(CourseImagesApi);
   private readonly progressApi = inject(ProgressApi);
   private readonly studyApi = inject(StudyApi);
   private readonly discussionApi = inject(DiscussionApi);
   private readonly authService = inject(AuthService);
+  private readonly confirmation = inject(ConfirmationService);
 
   detail: CourseDetailResponse | null = null;
   courseId = 0;
@@ -52,7 +58,14 @@ export class CourseViewComponent implements OnInit {
   playbackUrl = '';
   playbackLoading = false;
   playbackError = '';
-
+  markdownHtml = '';
+  completedItems = 0;
+  totalItems = 0;
+  percentComplete = 0;
+  courseConcluded = false;
+  certificateDownloading = false;
+  certificateError = '';
+  private markdownUrls = new Map<number, string>();
   private comments: CommentResponse[] = [];
 
   ngOnInit(): void {
@@ -69,8 +82,15 @@ export class CourseViewComponent implements OnInit {
         this.loadStudy(itemId);
       } else if (itemId) {
         this.selectAula(itemId);
+      } else {
+        this.clearAulaSelection();
       }
     });
+  }
+
+  openOverview(): void {
+    void this.router.navigate(['/courses', this.courseId]);
+    this.clearAulaSelection();
   }
 
   openAula(aula: StudyItemResponse): void {
@@ -85,8 +105,75 @@ export class CourseViewComponent implements OnInit {
     if (!this.selectedAulaId) {
       return;
     }
-    this.progressApi.updateItemProgress(this.courseId, this.selectedAulaId, { completed: true })
-      .subscribe(() => this.loadStudy(this.selectedAulaId));
+    const completedAulaId = this.selectedAulaId;
+    this.progressApi.updateItemProgress(this.courseId, completedAulaId, { completed: true })
+      .subscribe({
+        next: () => this.loadStudy(completedAulaId, true),
+        error: () => {}
+      });
+  }
+
+  rollbackAula(): void {
+    if (!this.selectedAulaId) {
+      return;
+    }
+    const aulaId = this.selectedAulaId;
+    this.confirmation.confirm({
+      title: 'Desfazer progresso?',
+      message: 'Isso limpa esta aula e todas as aulas seguintes. Comentários são preservados.',
+      confirmLabel: 'Desfazer progresso',
+      cancelLabel: 'Cancelar',
+      destructive: true
+    }).subscribe(confirmed => {
+      if (!confirmed) {
+        return;
+      }
+      this.progressApi.updateItemProgress(this.courseId, aulaId, { completed: false })
+        .subscribe({
+          next: () => this.loadStudy(aulaId, false),
+          error: () => {}
+        });
+    });
+  }
+
+  downloadCertificate(): void {
+    this.certificateError = '';
+    this.certificateDownloading = true;
+    this.progressApi.downloadCourseCertificate(this.courseId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `certificado-curso-${this.courseId}.pdf`;
+        anchor.click();
+        URL.revokeObjectURL(url);
+        this.certificateDownloading = false;
+      },
+      error: () => {
+        this.certificateDownloading = false;
+        this.certificateError = 'Não foi possível baixar o certificado.';
+      }
+    });
+  }
+
+  rollbackFromFinish(): void {
+    const lastCompleted = [...this.aulas].reverse().find(aula => !!aula.completed && !!aula.id);
+    if (!lastCompleted?.id) {
+      return;
+    }
+    this.selectedAulaId = lastCompleted.id;
+    this.rollbackAula();
+  }
+
+  isSelectedAulaCompleted(): boolean {
+    if (!this.selectedAulaId) {
+      return false;
+    }
+    return this.aulas.some(aula => aula.id === this.selectedAulaId && !!aula.completed);
+  }
+
+  progressLabel(): string {
+    return `${this.completedItems}/${this.totalItems} (${Math.round(this.percentComplete)}%)`;
   }
 
   toggleAulasSidebar(): void {
@@ -108,8 +195,17 @@ export class CourseViewComponent implements OnInit {
     return aula.accessible ? 'accessible' : 'locked';
   }
 
+  aulaStateIcon(aula: StudyItemResponse): string {
+    return {
+      completed: 'check_circle',
+      current: 'play_arrow',
+      accessible: 'radio_button_unchecked',
+      locked: 'lock'
+    }[this.aulaState(aula)];
+  }
+
   renderMarkdown(markdown: string | undefined): string {
-    return renderCourseMarkdown(markdown);
+    return this.markdownHtml || renderCourseMarkdown(markdown, this.markdownUrls);
   }
 
   publishComment(): void {
@@ -184,19 +280,29 @@ export class CourseViewComponent implements OnInit {
     this.afterCommentMutation(comment, id => this.discussionApi.restoreComment(id));
   }
 
-  private loadStudy(requestedItemId: number | null): void {
+  private loadStudy(requestedItemId: number | null, advanceAfterCompletion = false): void {
     this.studyApi.getCourseStudy(this.courseId).subscribe(study => {
       this.aulas = [...(study.items ?? [])].sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
-      const requested = requestedItemId
-        ? this.aulas.find(aula => aula.id === requestedItemId && aula.accessible)
-        : undefined;
-      const firstAccessible = this.aulas.find(aula => aula.accessible && !aula.completed)
-        ?? this.aulas.find(aula => aula.accessible);
-      const selected = requested ?? firstAccessible;
-
-      if (selected?.id) {
-        this.selectAula(selected.id);
+      this.completedItems = study.completedItems ?? 0;
+      this.totalItems = study.totalItems ?? this.aulas.length;
+      this.percentComplete = study.percentComplete ?? 0;
+      this.courseConcluded = !!study.concluded;
+      if (advanceAfterCompletion && requestedItemId) {
+        const completedIndex = this.aulas.findIndex(aula => aula.id === requestedItemId);
+        const next = this.aulas[completedIndex + 1];
+        if (next?.id && next.accessible) {
+          this.openAula(next);
+          return;
+        }
       }
+      if (requestedItemId) {
+        const requested = this.aulas.find(aula => aula.id === requestedItemId && aula.accessible);
+        if (requested?.id) {
+          this.selectAula(requested.id);
+          return;
+        }
+      }
+      this.clearAulaSelection();
     });
   }
 
@@ -209,13 +315,51 @@ export class CourseViewComponent implements OnInit {
     this.commentDraft = '';
     this.commentError = '';
     this.clearPlayback();
+    this.markdownHtml = '';
+    this.markdownUrls = new Map();
     this.studyApi.getStudyItem(this.courseId, itemId).subscribe(item => {
       this.selectedAula = item;
       if (item.itemType === 'VIDEO') {
         this.loadPlaybackTicket(itemId);
       }
+      if (item.itemType === 'MARKDOWN') {
+        this.loadMarkdownImages(item.markdownBody);
+      }
     });
     this.loadComments(itemId);
+  }
+
+  private clearAulaSelection(): void {
+    this.selectedAulaId = null;
+    this.selectedAula = null;
+    this.commentDraft = '';
+    this.commentError = '';
+    this.comments = [];
+    this.displayedComments = [];
+    this.clearPlayback();
+    this.markdownHtml = '';
+    this.markdownUrls = new Map();
+  }
+
+  private loadMarkdownImages(markdown: string | undefined): void {
+    const assetIds = extractCourseAssetIds(markdown);
+    if (!assetIds.length) {
+      this.markdownHtml = renderCourseMarkdown(markdown);
+      return;
+    }
+    this.courseImagesApi.createImageTickets(this.courseId, { assetIds }).subscribe({
+      next: response => {
+        this.markdownUrls = new Map(
+          (response.tickets ?? [])
+            .filter(ticket => ticket.assetId != null && ticket.url)
+            .map(ticket => [ticket.assetId!, ticket.url!])
+        );
+        this.markdownHtml = renderCourseMarkdown(markdown, this.markdownUrls);
+      },
+      error: () => {
+        this.markdownHtml = renderCourseMarkdown(markdown);
+      }
+    });
   }
 
   private loadPlaybackTicket(itemId: number): void {

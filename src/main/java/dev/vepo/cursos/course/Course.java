@@ -54,6 +54,9 @@ public class Course {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "cover_image_asset_id")
+    private Long coverImageAssetId;
+
     @ManyToMany
     @JoinTable(name = "tb_course_categories", joinColumns = @JoinColumn(name = "course_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
     private Set<Category> categories = new HashSet<>();
@@ -113,8 +116,22 @@ public class Course {
         return updatedAt;
     }
 
+    public Long getCoverImageAssetId() {
+        return coverImageAssetId;
+    }
+
     public Set<Category> getCategories() {
         return categories;
+    }
+
+    public void setCoverImageAssetId(long assetId) {
+        this.coverImageAssetId = assetId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void clearCoverImageAssetId() {
+        this.coverImageAssetId = null;
+        this.updatedAt = Instant.now();
     }
 
     public boolean isTaughtBy(long passportUserId) {
