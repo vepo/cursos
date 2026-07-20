@@ -12,7 +12,7 @@ import jakarta.enterprise.event.Observes;
 @ApplicationScoped
 public class SPARouting {
     private static final String SPA_ROOT = "/";
-    private static final String[] PASSTHROUGH_PATH_PREFIXES = { "/q/", "/api/", "/@" };
+    private static final String[] PASSTHROUGH_PATH_PREFIXES = { "/q/", "/api/", "/media/", "/@" };
     private static final Predicate<String> IS_STATIC_RESOURCE_PATH = Pattern.compile(".+\\.[a-zA-Z0-9]+$")
                                                                             .asMatchPredicate();
 

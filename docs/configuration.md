@@ -120,6 +120,7 @@ Exposed publicly as `GET /api/branding`. One deployment = one brand.
 |----------|-------|---------|
 | `quarkus.quinoa` | `true` (`false` in `%test`) | Embed / drive SPA |
 | `quarkus.quinoa.ui-dir` | `src/main/webui` | Angular project root |
+| `quarkus.quinoa.build-dir` | `dist/cursos/browser` | Angular `application` builder output (must include `browser/` so `/` serves `index.html`) |
 | `quarkus.quinoa.package-manager-command.build` | `run build:ui` | Package UI without `prebuild`/`generate:api` (run codegen before `mvn package`) |
 | `quarkus.quinoa.dev-server.port` | `4203` | Dev UI port (proxied via 8083) |
 | `quarkus.quinoa.dev-server.command` | `npm run start` | Dev server command |

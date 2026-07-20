@@ -109,6 +109,9 @@ curl -sf https://backoffice.vepo.dev/cursos/q/health
 
 # Public branding (no auth)
 curl -sf https://learn.vepo.dev/api/branding
+
+# SPA must be at site root (not nested under /browser/)
+curl -sf https://learn.vepo.dev/ | grep -q '<title>Learn</title>'
 ```
 
 Then in a browser:
