@@ -1,5 +1,7 @@
 import {
   ApplicationConfig,
+  inject,
+  provideAppInitializer,
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection
 } from '@angular/core';
@@ -9,6 +11,7 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { JWT_OPTIONS, JwtHelperService } from '@auth0/angular-jwt';
 import { routes } from './app.routes';
 import { authInterceptor } from './services/auth.interceptor';
+import { BrandingService } from './services/branding.service';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -18,6 +21,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
     { provide: JWT_OPTIONS, useValue: JWT_OPTIONS },
-    JwtHelperService
+    JwtHelperService,
+    provideAppInitializer(() => inject(BrandingService).load())
   ]
 };

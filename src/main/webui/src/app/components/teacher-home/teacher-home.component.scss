@@ -27,15 +27,16 @@
   border-left: 3px solid transparent;
   padding: 0.75rem;
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-on-chrome);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
 .course-option.is-selected {
-  border-left-color: var(--color-link);
-  background: var(--color-surface);
+  border-left-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-on-chrome);
 }
 
 .title-row {

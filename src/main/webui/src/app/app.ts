@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { filter, fromEvent } from 'rxjs';
 import { AuthService } from './services/auth.service';
+import { BrandingService } from './services/branding.service';
 
 const CURSOS_ADMIN_ROLE = 'cursos.admin';
 const SHELL_NAVIGATION_ID = 'shell-navigation';
@@ -30,12 +31,14 @@ interface NavigationGroup {
 export class AppComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly brandingService = inject(BrandingService);
   private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('menuToggle', { read: ElementRef })
   private readonly menuToggle?: ElementRef<HTMLButtonElement>;
 
-  readonly title = 'cursos';
+  readonly branding = this.brandingService.branding();
+  readonly copyrightYear = new Date().getFullYear();
   readonly shellNavigationId = SHELL_NAVIGATION_ID;
   readonly navigationGroups: readonly NavigationGroup[] = [
     {

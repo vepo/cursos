@@ -8,7 +8,7 @@
 
 .study-sidebar h2 {
   margin: 0 0 0.75rem;
-  color: var(--color-text);
+  color: var(--color-on-chrome);
 }
 
 .study-progress {
@@ -17,22 +17,24 @@
 }
 
 .study-progress__meta {
-  color: var(--color-text-muted);
+  color: var(--color-on-chrome);
   font-size: 0.8rem;
+  font-weight: 600;
   margin-bottom: 0.35rem;
 }
 
 .study-progress__track {
-  height: 0.4rem;
+  height: 0.5rem;
   border-radius: 999px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-on-chrome) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-on-chrome) 35%, transparent);
   overflow: hidden;
 }
 
 .study-progress__fill {
   height: 100%;
   background: var(--color-accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent) 40%, transparent);
 }
 
 .course-finish {
@@ -111,9 +113,9 @@
   gap: 0.5rem;
   padding: 0.75rem;
   border: 0;
-  border-bottom: 1px solid var(--color-surface);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-on-chrome) 12%, transparent);
   background: transparent;
-  color: var(--color-text);
+  color: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -135,11 +137,13 @@
 
 .aula-current {
   border-left: 4px solid var(--color-accent);
+  color: var(--color-on-chrome);
   font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 
 .aula-locked {
-  color: var(--color-text-muted);
+  color: color-mix(in srgb, var(--color-on-chrome) 55%, transparent);
   cursor: not-allowed;
 }
 

@@ -255,14 +255,16 @@ Progress: `round(100 * completedItems / totalItems)`.
 
 ### Frontend visual shell
 
-- The dark-only GitHub-dark palette is defined as CSS custom properties in `styles.scss`: near-black header/sidebar, `#0d1117` main, `#161b22` surfaces, `#30363d` borders, `#58a6ff` links, `#238636` primary actions, danger red.
+- Default **Learn** palette (light page, ink header, teal accent) as CSS custom properties in `styles.scss`; runtime white-label overrides via `GET /api/branding` (`learn.brand.*` / env).
+- Tokens include `--color-header`, `--color-on-chrome`, `--color-main-bg`, `--color-surface`, `--color-accent`, `--color-link`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-danger`.
 - `AppComponent` owns the single persistent header and authenticated navigation drawer. The drawer is right-anchored, closed by default at every breakpoint, role-filters **Admin**, and closes on toggle, leaf navigation, or Escape. On mobile it uses the full viewport width.
+- Sticky footer: copyright + brand name, optional Support/Docs/Legal/credit, OpenAPI only when `showDeveloperLinks`.
 - Catalog, study, teacher home, and course editor use the shared two-column shell classes. Sidebars hold category filters, the aula tree, teaching courses, or editor items respectively.
 - In study, `/courses/:id` is the **Visão geral** overview (**Sobre o curso** / **Sobre o autor**). Lesson routes hide those panels. Completing an aula advances to the next lesson route; the final aula remains selected.
 - Course edit, students, progress, and category administration render page titles/actions inside main and do not add nested `mat-toolbar` chrome.
 - The menu has at most two levels: **Aprender**, **Ensinar**, **Conta**, **Admin**. Header display name links to **Minha conta**. Unauthenticated users see **Entrar** instead of the authenticated drawer controls.
 
-Visual design and behavior: [feature/ui-visual-shell.md](feature/ui-visual-shell.md). Click paths: [docs/feature-catalog.md](docs/feature-catalog.md). Old teacher/category UI routes are removed without redirects because Cursos is pre-production.
+Visual design: [feature/learn-productization.md](feature/learn-productization.md), [feature/ui-visual-shell.md](feature/ui-visual-shell.md). Click paths: [docs/feature-catalog.md](docs/feature-catalog.md).
 
 Details: [docs/feature-catalog.md](docs/feature-catalog.md).
 
@@ -270,13 +272,15 @@ Details: [docs/feature-catalog.md](docs/feature-catalog.md).
 
 | Item | Value |
 |------|-------|
-| Cursos port | 8083 |
+| Learn (cursos) port | 8083 |
+| Production host | `https://learn.vepo.dev` |
 | Passport port | 8080 |
 | Angular dev server (Quinoa) | 4203 |
 | Test port | 8084 |
-| Dev startup script | `scripts/dev.sh` (Passport + Cursos) |
+| Dev startup script | `scripts/dev.sh` (Passport + Learn) |
 | Dev seed | `dev-import.sql` |
 | Flyway | clean-at-start in `%dev` |
+| Docker image | `vepo/cursos:main` (JVM) |
 
 ## 12. Feature workflow
 

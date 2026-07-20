@@ -1,8 +1,8 @@
-# Cursos — Online Course Platform
+# Learn — Online Course Platform
 
 Teach and learn with structured courses: ordered **markdown**, **image**, and **video** items, category catalog, enrollment with teacher approval, and progress tracking.
 
-Quarkus REST API + Angular SPA (Quinoa), authenticated via **Passport** JWT.
+Product name **Learn** (repo/Maven/Docker remain `cursos`). Quarkus REST API + Angular SPA (Quinoa), authenticated via **Passport** JWT. White-label branding via `learn.brand.*` / `GET /api/branding`.
 
 ## Tech stack
 
@@ -12,45 +12,51 @@ Quarkus REST API + Angular SPA (Quinoa), authenticated via **Passport** JWT.
 | Frontend | Angular 20, Angular Material |
 | Integration | Quarkus Quinoa (SPA dev server + production bundle) |
 | Database | PostgreSQL, Flyway |
-| Auth | Passport JWT (RS256) — SmallRye JWT validation in Cursos |
+| Auth | Passport JWT (RS256) — SmallRye JWT validation |
 | Email | Quarkus Mailer + Qute templates (enrollment notifications) |
 | Tests | JUnit 5, REST Assured, ArchUnit; Karma/Jasmine (frontend) |
 | Build | Maven |
+| Image | `vepo/cursos:main` (JVM) |
 
 ## Quick start
 
-One command (starts Passport if not already running, then Cursos):
+One command (starts Passport if not already running, then Learn):
 
 ```bash
 ./scripts/dev.sh
 ```
 
-Or manually — start **Passport** first (identity), then **Cursos**:
+Or manually — start **Passport** first (identity), then **Learn**:
 
 ```bash
 # Terminal 1 — Passport (8080)
 cd ../passport && mvn quarkus:dev
 
-# Terminal 2 — Cursos (8083)
+# Terminal 2 — Learn / cursos (8083)
 cd ../cursos && mvn quarkus:dev
 ```
 
-- Cursos UI + API: [http://localhost:8083](http://localhost:8083) (Quinoa forwards to the Angular dev server on 4203)
+- Learn UI + API: [http://localhost:8083](http://localhost:8083) (Quinoa forwards to the Angular dev server on 4203)
 - Passport login API: [http://localhost:8080/api/auth/login](http://localhost:8080/api/auth/login)
 - OpenAPI / Swagger UI: [http://localhost:8083/openapi](http://localhost:8083/openapi)
+- Branding API: [http://localhost:8083/api/branding](http://localhost:8083/api/branding)
+- Production host: [https://learn.vepo.dev](https://learn.vepo.dev)
 
 Dev mode runs Flyway clean+migrate (`%dev.quarkus.flyway.clean-at-start=true`) and loads sample data from `dev-import.sql`.
 
 ### Dev login
 
-Use Passport dev seed credentials (same as Backoffice):
+Use Passport dev seed credentials (same password for all: `qwas1234`):
 
-| User | Email | Password | Notes |
-|------|-------|----------|-------|
-| `cto-boss` | `cto@passport.vepo.dev` | `qwas1234` | Teacher + `cursos.admin`; **Admin → Categorias** |
-| `junior` | `junior_dev@passport.vepo.dev` | `qwas1234` | Enrolled student (first aula done; later aulas locked) |
+| User | Email | Notes |
+|------|-------|-------|
+| `cto-boss` | `cto@passport.vepo.dev` | Teacher + `cursos.admin`; Quarkus/PostgreSQL; certificate on Angular |
+| `junior` | `junior_dev@passport.vepo.dev` | Teaches Angular; student mid-progress on Quarkus |
+| `alice` / `bob` / `carol` / `diego` | `*@passport.vepo.dev` | Extra students (partial / concluded / pending / rejected) |
+| `mentor` | `mentor@passport.vepo.dev` | Second teacher (DevOps) |
+| `guest-user` | `guest@passport.vepo.dev` | Pending enrollment on Quarkus |
 
-Log in through the Cursos UI. Open the top-right menu icon for **Aprender**, **Ensinar**, and role-gated **Admin**.
+Log in through the Cursos UI. Open the top-right menu icon for **Aprender**, **Ensinar**, and role-gated **Admin**. Full persona table: [docs/feature-catalog.md](docs/feature-catalog.md) § Dev personas.
 
 ### After backend API changes
 

@@ -196,9 +196,9 @@ describe('Visual shell a11y and contrast (T27)', () => {
     const mainStyle = getComputedStyle(main);
     const accentStyle = getComputedStyle(accent);
 
-    expect(cssColorEquals(headerStyle.color, VISUAL_SHELL_TOKENS['--color-text'])
+    expect(cssColorEquals(headerStyle.color, VISUAL_SHELL_TOKENS['--color-on-chrome'])
       || cssColorEquals(headerStyle.color, VISUAL_SHELL_TOKENS['--color-text-muted']))
-      .withContext('header primary text uses --color-text (or muted)')
+      .withContext('header primary text uses --color-on-chrome (or muted)')
       .toBeTrue();
     expect(cssColorEquals(headerStyle.backgroundColor, VISUAL_SHELL_TOKENS['--color-header']))
       .withContext('header background uses --color-header for contrast pair')
@@ -215,7 +215,7 @@ describe('Visual shell a11y and contrast (T27)', () => {
       .withContext('accent control fill uses --color-accent')
       .toBeTrue();
     expect(cssColorEquals(accentStyle.color, VISUAL_SHELL_ACCENT_TEXT))
-      .withContext('accent control text is black for contrast on verde fósforo')
+      .withContext('accent control text is light for contrast on teal')
       .toBeTrue();
   });
 });

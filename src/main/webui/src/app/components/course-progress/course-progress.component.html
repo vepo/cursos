@@ -1,18 +1,99 @@
 <main class="app-shell-main nested-page" data-testid="shell-main">
   <header class="page-header">
-    <h1 class="page-title" data-testid="page-title">Progresso</h1>
+    <h1 class="page-title" data-testid="page-title">
+      Progresso
+      @if (courseTitle) {
+        <span class="page-title-context">— {{ courseTitle }}</span>
+      }
+    </h1>
     <div class="page-actions" data-testid="page-actions">
+      <a mat-button routerLink="/teacher">Voltar</a>
       <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
+      <a mat-button [routerLink]="['/teacher/courses', courseId, 'students']">Alunos</a>
     </div>
   </header>
 
-  @if (!summaries.length) {
-    <p>Nenhum aluno matriculado ainda.</p>
+  @if (message) {
+    <p class="message" role="status" data-testid="progress-message">{{ message }}</p>
   }
-  @for (summary of summaries; track summary.enrollmentId) {
-    <article>
-      <h2>{{ summary.studentName }}</h2>
-      <p>{{ summary.completedItems }}/{{ summary.totalItems }} ({{ summary.percentComplete | number: '1.0-1' }}%)</p>
-    </article>
+  @if (error) {
+    <p class="error" role="alert" data-testid="progress-error">{{ error }}</p>
+  }
+
+  @if (summaries.length === 0) {
+    <p class="empty-state" data-testid="progress-empty">Nenhum aluno matriculado ainda.</p>
+  } @else {
+    <p class="class-aggregate" data-testid="class-aggregate">
+      {{ studentCount }} {{ studentCount === 1 ? 'aluno' : 'alunos' }}
+      · conclusão média {{ averagePercent | number: '1.0-1' }}%
+      · {{ concludedCount }} {{ concludedCount === 1 ? 'concluiu' : 'concluíram' }} o curso
+    </p>
+
+    <section class="card progress-section" data-testid="student-progress-list">
+      <h2>Alunos ({{ studentCount }})</h2>
+      <ul class="student-progress-list">
+        @for (summary of sortedSummaries; track summary.enrollmentId) {
+          <li class="student-progress-row" data-testid="student-progress-row">
+            <button
+              type="button"
+              class="student-progress-toggle"
+              data-testid="expand-student"
+              [attr.aria-expanded]="isExpanded(summary.enrollmentId)"
+              (click)="toggleExpand(summary)">
+              <span class="expand-icon" aria-hidden="true">{{ isExpanded(summary.enrollmentId) ? '▾' : '▸' }}</span>
+              <span class="student-progress-identity">
+                <strong>{{ summary.studentName }}</strong>
+                @if (lastActivity(summary); as activity) {
+                  <span class="last-activity" data-testid="last-activity">
+                    última atividade {{ activity | date: 'dd/MM/yyyy' }}
+                  </span>
+                }
+              </span>
+              <span class="student-progress-metrics">
+                <span class="progress-bar" data-testid="progress-bar"
+                      role="progressbar"
+                      [attr.aria-valuenow]="summary.percentComplete ?? 0"
+                      aria-valuemin="0"
+                      aria-valuemax="100">
+                  <span class="progress-bar__fill"
+                        [style.width.%]="summary.percentComplete ?? 0"></span>
+                </span>
+                <span class="progress-counts" data-testid="progress-counts">
+                  {{ summary.percentComplete | number: '1.0-1' }}%
+                  ({{ summary.completedItems }}/{{ summary.totalItems }})
+                </span>
+                @if (isConcluded(summary)) {
+                  <span class="status-badge status-badge--enrolled" data-testid="concluded-badge">
+                    Concluído
+                  </span>
+                }
+              </span>
+            </button>
+
+            @if (isExpanded(summary.enrollmentId)) {
+              <ul class="aula-checklist" data-testid="aula-checklist">
+                @for (aula of aulasFor(summary); track aula.courseItemId) {
+                  <li data-testid="aula-checklist-row">
+                    <span class="aula-status" aria-hidden="true">{{ aula.completed ? '✓' : '○' }}</span>
+                    <span class="aula-title">{{ aula.sortOrder }}. {{ aula.title }}</span>
+                    <span class="aula-actions">
+                      @if (aula.completed) {
+                        <button mat-button type="button" data-testid="undo-aula"
+                                [disabled]="actionInFlight"
+                                (click)="undoComplete(summary, aula)">Desfazer</button>
+                      } @else {
+                        <button mat-stroked-button type="button" data-testid="mark-aula"
+                                [disabled]="actionInFlight"
+                                (click)="markComplete(summary, aula)">Marcar concluída</button>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+          </li>
+        }
+      </ul>
+    </section>
   }
 </main>

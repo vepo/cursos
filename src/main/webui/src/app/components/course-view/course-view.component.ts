@@ -67,6 +67,9 @@ export class CourseViewComponent implements OnInit {
   certificateError = '';
   private markdownUrls = new Map<number, string>();
   private comments: CommentResponse[] = [];
+  /** Open-course resume (FQ20–FQ22): pending until study tree and course detail are both loaded. */
+  private resumePending = false;
+  private studyTreeLoaded = false;
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
@@ -75,21 +78,26 @@ export class CourseViewComponent implements OnInit {
 
       if (courseId !== this.courseId) {
         this.courseId = courseId;
+        this.studyTreeLoaded = false;
+        this.resumePending = !itemId && !this.openedWithExplicitOverview();
         this.coursesApi.findCourse(courseId).subscribe(detail => {
           this.detail = detail;
           this.syncDisplayedComments();
+          this.resumeStudyWhenReady();
         });
         this.loadStudy(itemId);
       } else if (itemId) {
+        this.resumePending = false;
         this.selectAula(itemId);
       } else {
+        this.resumePending = false;
         this.clearAulaSelection();
       }
     });
   }
 
   openOverview(): void {
-    void this.router.navigate(['/courses', this.courseId]);
+    void this.router.navigate(['/courses', this.courseId], { queryParams: { overview: 1 } });
     this.clearAulaSelection();
   }
 
@@ -303,7 +311,37 @@ export class CourseViewComponent implements OnInit {
         }
       }
       this.clearAulaSelection();
+      this.studyTreeLoaded = true;
+      this.resumeStudyWhenReady();
     });
+  }
+
+  private openedWithExplicitOverview(): boolean {
+    return this.route.snapshot.queryParamMap?.get('overview') === '1';
+  }
+
+  /** FQ20–FQ22: default landing when a student opens the course root — free navigation stays unchanged. */
+  private resumeStudyWhenReady(): void {
+    if (!this.resumePending || !this.detail || !this.studyTreeLoaded) {
+      return;
+    }
+    this.resumePending = false;
+    if (this.detail.teaching || !this.detail.enrolled) {
+      return;
+    }
+    if (this.courseConcluded) {
+      const lastCompleted = [...this.aulas].reverse().find(aula => !!aula.completed && !!aula.accessible && !!aula.id);
+      if (lastCompleted) {
+        this.openAula(lastCompleted);
+      }
+      return;
+    }
+    if (this.completedItems > 0) {
+      const currentAula = this.aulas.find(aula => !aula.completed && !!aula.accessible && !!aula.id);
+      if (currentAula) {
+        this.openAula(currentAula);
+      }
+    }
   }
 
   private selectAula(itemId: number): void {

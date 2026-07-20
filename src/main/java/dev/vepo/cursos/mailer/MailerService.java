@@ -29,7 +29,7 @@ public class MailerService {
 
                    %s enrolled you in the course "%s".
 
-                   Open Cursos to start learning.
+                   Open Learn to start learning.
                    """.formatted(student.name(), course.getTeacherName(), course.getTitle());
         try {
             mailer.send(Mail.withText(student.email(), subject, body));

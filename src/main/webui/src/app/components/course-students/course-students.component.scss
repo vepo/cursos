@@ -1,2 +1,70 @@
 .full { width: 100%; }
-li { margin: 0.5rem 0; }
+
+.message {
+  color: #3fb950;
+  margin: 0 0 0.5rem;
+}
+
+.error {
+  margin: 0 0 0.5rem;
+}
+
+.students-section {
+  margin-bottom: 1rem;
+
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+  }
+}
+
+.student-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0;
+
+    + li {
+      border-top: 1px solid var(--color-border);
+    }
+  }
+}
+
+.student-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.student-email {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.student-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.page-title-context {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.empty-state {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.directory-search {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}

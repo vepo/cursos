@@ -67,6 +67,18 @@ describe('CourseViewComponent study UI', () => {
     { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
   ];
 
+  const notStartedTree: StudyItemResponse[] = [
+    { id: 1, title: 'Intro', sortOrder: 1, completed: false, accessible: true },
+    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: false },
+    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
+  ];
+
+  const concludedTree: StudyItemResponse[] = [
+    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
+    { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
+    { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true }
+  ];
+
   const introContent: CourseItemResponse = {
     id: 1,
     courseId,
@@ -116,7 +128,14 @@ describe('CourseViewComponent study UI', () => {
     };
   }
 
-  function configure(params: Record<string, string>): void {
+  function configure(
+    params: Record<string, string>,
+    options: {
+      items?: StudyItemResponse[];
+      detail?: { teaching?: boolean; enrolled?: boolean };
+      query?: Record<string, string>;
+    } = {}
+  ): void {
     TestBed.resetTestingModule();
 
     paramMap$ = new BehaviorSubject(convertToParamMap(params));
@@ -135,7 +154,7 @@ describe('CourseViewComponent study UI', () => {
     confirmation.confirmOrTrue.and.returnValue(of(true));
     discussionApi.listComments.and.returnValue(of([]) as never);
 
-    studyApi.getCourseStudy.and.returnValue(of(studyResponse()) as never);
+    studyApi.getCourseStudy.and.returnValue(of(studyResponse(options.items ?? studyTree)) as never);
     studyApi.getStudyItem.and.callFake((_cId: number, itemId: number) => {
       if (itemId === 1) {
         return of(introContent) as never;
@@ -145,8 +164,8 @@ describe('CourseViewComponent study UI', () => {
     progressApi.updateItemProgress.and.returnValue(of({ completed: true }) as never);
     progressApi.downloadCourseCertificate.and.returnValue(of(new Blob(['%PDF'], { type: 'application/pdf' })) as never);
     coursesApi.findCourse.and.returnValue(of({
-      teaching: false,
-      enrolled: true,
+      teaching: options.detail?.teaching ?? false,
+      enrolled: options.detail?.enrolled ?? true,
       course: { id: courseId, title: 'Quarkus', summary: 'Curso completo', teacherName: 'Ana', teacherDescription: 'Instrutora backend' },
       items: [introContent, setupContent]
     }) as never);
@@ -171,7 +190,10 @@ describe('CourseViewComponent study UI', () => {
         {
           provide: ActivatedRoute,
           useValue: {
-            snapshot: { paramMap: convertToParamMap(params) },
+            snapshot: {
+              paramMap: convertToParamMap(params),
+              queryParamMap: convertToParamMap(options.query ?? {})
+            },
             paramMap: paramMap$.asObservable()
           }
         }
@@ -232,8 +254,8 @@ describe('CourseViewComponent study UI', () => {
   }));
 
   it('shouldIndicateCompletedCurrentAndLockedAulasAndPreventLockedNavigation', fakeAsync(() => {
-    // Course root: no aula selected — accessible incomplete aula is not "current".
-    configure({ courseId: String(courseId) });
+    // Explicit overview (?overview=1): no aula selected — accessible incomplete aula is not "current".
+    configure({ courseId: String(courseId) }, { query: { overview: '1' } });
 
     expect(aulaState(1)).toBe('completed');
     expect(aulaState(2)).toBe('accessible');
@@ -248,7 +270,8 @@ describe('CourseViewComponent study UI', () => {
   }));
 
   it('shouldShowOverviewOnCourseRouteAndOpenAulaOnLessonRoute', fakeAsync(() => {
-    configure({ courseId: String(courseId) });
+    // Not started: course root stays on overview (no resume).
+    configure({ courseId: String(courseId) }, { items: notStartedTree });
 
     const summary = fixture.nativeElement.querySelector('[data-testid="course-summary"]');
     expect(summary).not.toBeNull();
@@ -279,7 +302,8 @@ describe('CourseViewComponent study UI', () => {
   }));
 
   it('shouldShowCourseOverviewWithoutSelectingAulaOnCourseRoot', fakeAsync(() => {
-    configure({ courseId: String(courseId) });
+    // TC21 (revised TC11): not-started enrollment keeps overview on course root.
+    configure({ courseId: String(courseId) }, { items: notStartedTree });
 
     const summary = fixture.nativeElement.querySelector('[data-testid="course-summary"]');
     expect(summary).withContext('Course overview must be present on course root').not.toBeNull();
@@ -311,7 +335,7 @@ describe('CourseViewComponent study UI', () => {
     visaoGeral?.click();
     fixture.detectChanges();
 
-    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId]);
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId], { queryParams: { overview: 1 } });
 
     const titleControl = fixture.nativeElement.querySelector(
       '[data-testid="course-overview-title"]'
@@ -324,7 +348,62 @@ describe('CourseViewComponent study UI', () => {
     titleControl?.click();
     fixture.detectChanges();
 
-    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId]);
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId], { queryParams: { overview: 1 } });
+  }));
+
+  it('shouldResumeInProgressCourseAtCurrentAulaOnOpen', fakeAsync(() => {
+    // FQ20 / TC20: enrolled with progress — open lands on the current aula.
+    configure({ courseId: String(courseId) });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId, 'lessons', 2]);
+    expect(studyApi.getStudyItem).toHaveBeenCalledWith(courseId, 2);
+    expect(fixture.componentInstance.selectedAulaId).toBe(2);
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).toBeNull();
+  }));
+
+  it('shouldNotResumeWhenCourseNotStarted', fakeAsync(() => {
+    configure({ courseId: String(courseId) }, { items: notStartedTree });
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(studyApi.getStudyItem).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).not.toBeNull();
+  }));
+
+  it('shouldNotResumeWhenNotEnrolled', fakeAsync(() => {
+    configure({ courseId: String(courseId) }, { detail: { enrolled: false } });
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).not.toBeNull();
+  }));
+
+  it('shouldNotResumeForTeacherPreview', fakeAsync(() => {
+    // FQ22 / TC23: teacher opening own course always lands on overview.
+    configure({ courseId: String(courseId) }, { detail: { teaching: true, enrolled: false } });
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).not.toBeNull();
+  }));
+
+  it('shouldSuppressResumeWithExplicitOverviewQuery', fakeAsync(() => {
+    // FQ20 / TC22: Visão geral navigation (?overview=1) keeps overview even in progress.
+    configure({ courseId: String(courseId) }, { query: { overview: '1' } });
+
+    expect(router.navigate).not.toHaveBeenCalled();
+    expect(studyApi.getStudyItem).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).not.toBeNull();
+    expect(fixture.componentInstance.selectedAulaId).toBeNull();
+  }));
+
+  it('shouldOpenFinishStateWhenOpeningConcludedCourse', fakeAsync(() => {
+    // FQ21 / TC23: concluded course opens on finish screen, not overview.
+    configure({ courseId: String(courseId) }, { items: concludedTree });
+
+    expect(router.navigate).toHaveBeenCalledWith(['/courses', courseId, 'lessons', 3]);
+    expect(fixture.componentInstance.selectedAulaId).toBe(3);
+    expect(fixture.nativeElement.querySelector('[data-testid="course-finish"]'))
+      .withContext('Concluded course must open on finish state')
+      .not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="course-summary"]')).toBeNull();
   }));
 
   it('shouldRenderMarkdownAsSanitizedHtmlNotRawPre', fakeAsync(() => {
@@ -1495,17 +1574,22 @@ describe('CourseViewComponent visual shell (T24)', () => {
     expect(locked?.getAttribute('aria-disabled')).toBe('true');
 
     const accent = VISUAL_SHELL_TOKENS['--color-accent'];
-    const muted = VISUAL_SHELL_TOKENS['--color-text-muted'];
+    const onChrome = VISUAL_SHELL_TOKENS['--color-on-chrome'];
 
     expect(usesTokenColor(getComputedStyle(completed!), accent))
       .withContext('aula-completed must use --color-accent')
       .toBeTrue();
-    expect(usesTokenColor(getComputedStyle(current!), accent))
-      .withContext('aula-current must use --color-accent')
+    expect(usesTokenColor(getComputedStyle(current!), accent)
+      || usesTokenColor(getComputedStyle(current!), onChrome))
+      .withContext('aula-current must use accent border and readable on-chrome text')
       .toBeTrue();
-    expect(usesTokenColor(getComputedStyle(locked!), muted))
-      .withContext('aula-locked must use --color-text-muted')
-      .toBeTrue();
+    const lockedColor = getComputedStyle(locked!).color;
+    expect(lockedColor)
+      .withContext('aula-locked must keep readable muted text on ink sidebar')
+      .not.toBe('rgba(0, 0, 0, 0)');
+    expect(cssColorEquals(lockedColor, VISUAL_SHELL_TOKENS['--color-text']))
+      .withContext('aula-locked must not use dark page text on ink sidebar')
+      .toBeFalse();
 
     locked?.click();
     fixture.detectChanges();
@@ -1590,7 +1674,7 @@ describe('CourseViewComponent visual shell (T24)', () => {
     expect(lockedIcon.getAttribute('aria-hidden')).toBe('true');
 
     const accent = VISUAL_SHELL_TOKENS['--color-accent'];
-    const muted = VISUAL_SHELL_TOKENS['--color-text-muted'];
+    const onChrome = VISUAL_SHELL_TOKENS['--color-on-chrome'];
 
     expect(
       usesTokenColor(getComputedStyle(completed), accent)
@@ -1599,11 +1683,11 @@ describe('CourseViewComponent visual shell (T24)', () => {
     expect(
       usesTokenColor(getComputedStyle(current), accent)
       || usesTokenColor(getComputedStyle(currentIcon), accent)
-    ).withContext('current unlocked icon/row must use accent').toBeTrue();
-    expect(
-      usesTokenColor(getComputedStyle(locked), muted)
-      || usesTokenColor(getComputedStyle(lockedIcon), muted)
-    ).withContext('locked icon/row must use muted token').toBeTrue();
+      || usesTokenColor(getComputedStyle(current), onChrome)
+    ).withContext('current unlocked icon/row must use accent or on-chrome').toBeTrue();
+    expect(cssColorEquals(getComputedStyle(locked).color, VISUAL_SHELL_TOKENS['--color-text']))
+      .withContext('locked icon/row must not use dark page text on ink sidebar')
+      .toBeFalse();
   }));
 
   it('shouldExposeAulasControlForSidebarAccessOnNarrowViewport', fakeAsync(() => {
@@ -1691,12 +1775,15 @@ describe('CourseViewComponent summary and media (T17)', () => {
     confirmation.confirmOrTrue.and.returnValue(of(true));
     discussionApi.listComments.and.returnValue(of([]) as never);
 
+    // Course root uses a not-started tree so open-course resume does not redirect (FQ20).
     studyApi.getCourseStudy.and.returnValue(of({
       courseId,
-      items: studyTree,
-      completedItems: 1,
+      items: courseRoot
+        ? studyTree.map(aula => ({ ...aula, completed: false }))
+        : studyTree,
+      completedItems: courseRoot ? 0 : 1,
       totalItems: 2,
-      percentComplete: 50,
+      percentComplete: courseRoot ? 0 : 50,
       concluded: false
     }) as never);
     studyApi.getStudyItem.and.returnValue(of(item) as never);

@@ -1,7 +1,7 @@
 # Student study experience & teacher area
 
-**Feature version:** 4  
-**Status:** in-progress  
+**Feature version:** 5  
+**Status:** done  
 **Requested:** 2026-07-18
 
 ## Summary
@@ -19,7 +19,7 @@ Each accessible **aula** has a discussion area for enrolled students and the cou
 | Field | Value |
 |-------|-------|
 | **Source** | ASCII below |
-| **Last updated** | 2026-07-18 |
+| **Last updated** | 2026-07-19 |
 
 ### Shell: navigation menu (≤ 2 levels)
 
@@ -89,7 +89,9 @@ Rule: **no third level** — groups contain only leaves; leaves never nest.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Screen: `/courses/:id` — course overview (before aulas)
+### Screen: `/courses/:id` — course overview (not enrolled / not started)
+
+Shown when the viewer is **not enrolled**, or **enrolled with zero completed aulas** (not started). Also when the student explicitly opens **Visão geral** (see FQ20).
 
 | Region | Elements |
 |--------|----------|
@@ -104,6 +106,23 @@ Rule: **no third level** — groups contain only leaves; leaves never nest.
 │ 🔒 2. Setup  │                                              │
 └──────────────┴──────────────────────────────────────────────┘
 ```
+
+### Entry: open enrolled in-progress course → current aula
+
+When the student **opens** an enrolled course that already has progress (`completedItems > 0`) and is not concluded, navigation lands on the **current aula** (first incomplete accessible aula) at `/courses/:id/lessons/:itemId` — not on overview.
+
+```
+Catalog "Matriculado" card / link
+        │
+        ▼
+  in progress? ──yes──► /courses/:id/lessons/:currentAulaId
+        │
+        no (not started / not enrolled / concluded†)
+        ▼
+  /courses/:id  (overview or finish screen†)
+```
+
+† Concluded behavior: **FQ21**.
 
 ### Screen: `/courses/:id/lessons/:itemId` — selected aula
 
@@ -127,7 +146,7 @@ Rule: **no third level** — groups contain only leaves; leaves never nest.
 └──────────────┴──────────────────────────────────────────────┘
 ```
 
-Return to overview: click **Visão geral** or navigate to `/courses/:id` (e.g. course title in the page header).
+Return to overview anytime: click **Visão geral** or the course title (`/courses/:id?overview=1`). Completed and other accessible aulas stay reachable from the tree — resume only affects the **default open** landing.
 
 ### Screen: `/teacher/courses/:id/edit` — markdown edit (unchanged intent)
 
@@ -154,20 +173,24 @@ Raw markdown editor / media upload — not HTML preview as primary edit surface 
 | **FQ15** | May a teacher **restore** a hidden comment? May comment authors edit or delete their own comments? | answered | Teacher may restore; authors cannot edit or delete comments in v1. |
 | **FQ16** | Are comments allowed only after the aula is **unlocked**, and do they remain readable if that aula becomes locked again? | answered | List/create/upvote only while accessible. Preserve comments when relocked, but hide them until the aula unlocks again. |
 | **FQ17** | **Admin** menu (**FQ9**): which leaf items belong under **Admin**, and who may see the group (Passport JWT role vs always hidden until a platform-admin feature exists)? | answered | **Categorias** under `/admin/categories`; show only for Passport JWT group `cursos.admin`, and enforce that role in the API. |
-| **FQ18** | After opening an aula, how does the student return to **Sobre o curso** / **Sobre o autor**? | answered | Both: sidebar leaf **Visão geral** above the aulas **and** navigating to `/courses/:id` (course title / root URL). |
-| **FQ19** | Should `/courses/:courseId` (no lesson id) show the overview only and **not** auto-open the first accessible aula? | answered | Yes — course root shows overview only; aulas open only via tree selection or lesson routes. |
+| **FQ18** | After opening an aula, how does the student return to **Sobre o curso** / **Sobre o autor**? | answered | Both: sidebar leaf **Visão geral** above the aulas **and** navigating to `/courses/:id` (course title / root URL). With **FQ20**, explicit overview uses a suppress-resume signal so open-course resume does not bounce the student back to the current aula. |
+| **FQ19** | Should `/courses/:courseId` (no lesson id) show the overview only and **not** auto-open the first accessible aula? | answered | **Superseded 2026-07-19 by FQ20–FQ22.** Original: yes, overview only. New rule: overview for not enrolled / not started; resume current aula when **opening** an in-progress enrollment. Students may still open overview and any accessible (including completed) aula anytime. |
+| **FQ20** | When the student opens an **in-progress** course (enrolled, `completedItems > 0`, not concluded), land on overview or on the **current aula**? How does **Visão geral** still work? | answered | **Open-course only:** land on **current aula** (first incomplete accessible). Explicit **Visão geral** / course title still open overview (`?overview=1`). Does **not** lock the student out of overview or completed aulas afterward. |
+| **FQ21** | When the student opens a **concluded** course (100%), land where? | answered | Finish / concluded study state (select a completed aula so the existing finish screen shows), not overview. Student may still open **Visão geral** or any aula afterward. |
+| **FQ22** | Does **teacher** preview of their own course follow the same resume rule, or always land on overview? | answered | Teachers always land on **overview** at `/courses/:id` (no auto-resume); students follow FQ20/FQ21. |
+| **FQ23** | Which markdown constructs must the study renderer support beyond headings/paragraphs/images? (Bug: `**aula**` shows literally.) | answered | Inline **bold** (`**`/`__`), *italic* (`*`/`_`), `inline code`, `[links](https://…)` (safe http/https only, `rel="noopener"`), unordered/ordered lists, fenced code blocks. Raw HTML remains stripped. (Defaults accepted with T31–T35 approval.) |
 
 ## Impact
 
 | Area | Change |
 |------|--------|
-| Domain | Sequential unlock; UI **Aula**; **Teacher area**; menu groups **Aprender** / **Ensinar** / **Admin**; **Comment**, **Upvote**, **Hidden comment** (invisible to students) |
-| API | Study/accessibility response; 403 enforcement; comment list/create/upvote; teacher hide/restore; `cursos.admin` category authorization |
-| UI | Three menu groups; role-gated **Admin**; `/teacher/*`; lesson tree; markdown → HTML; aula discussion; no student placeholder for hidden comments |
-| Schema | New comment and comment-upvote tables; hide/moderation metadata |
-| Dev seed | Passport `cto-boss` receives `cursos.admin`; Cursos data includes sequential progress and discussions |
-| Tests | Menu groups/role visibility; unlock and relock rules; HTML rendering; discussion authorization/upvote/moderation |
-| Docs | Domain spec, feature catalog (menu map), ARCHITECTURE routes |
+| Domain | Sequential unlock; UI **Aula**; **Teacher area**; menu groups **Aprender** / **Ensinar** / **Admin**; **Comment**, **Upvote**, **Hidden comment**; **open-course resume** (continue at current aula) |
+| API | No new endpoints — reuse `GET /courses/{id}/study` progress fields + `GET /courses/{id}` teaching/enrolled |
+| UI | `CourseViewComponent` default entry: resume vs overview vs finish; `?overview=1` for explicit Visão geral; tree/aula navigation unchanged |
+| Schema | none |
+| Dev seed | none required (existing partial progress exercises resume) |
+| Tests | Angular: resume / overview / concluded / teacher / Visão geral suppress; revise TC11 |
+| Docs | Domain spec (Visão geral + resume), feature catalog Course study steps |
 
 ## Architecture
 
@@ -178,15 +201,29 @@ Raw markdown editor / media upload — not HTML preview as primary edit surface 
 - Categories remain in `category`; create/update endpoints use `@RolesAllowed("cursos.admin")`. Listing remains authenticated because catalog filters need categories.
 - Angular: shell `NavMenuComponent` uses declarative groups and JWT group visibility; `TeacherHomeComponent`; existing teacher screens move under `/teacher/*`; `CourseViewComponent` shows one selected aula and a lesson tree.
 - After a successful completion update, `CourseViewComponent` reloads the study tree, selects the next item by `sortOrder`, and navigates to its canonical lesson route. If no next item exists, it keeps the completed final aula selected.
-- Course root `/courses/:courseId` loads the study tree but does **not** auto-select an aula; main shows overview panels only. Lesson routes select the aula and hide overview. Sidebar **Visão geral** and the course title navigate to the course root.
+- **Open-course resume (FQ20–FQ22):** On `/courses/:courseId` with no `itemId`, after study tree + course detail are available:
+  1. If `?overview=1` (explicit **Visão geral** / title) → show overview; do not resume.
+  2. Else if `detail.teaching` → show overview (teacher preview; FQ22).
+  3. Else if enrolled student and `study.concluded` → open last completed aula (finish screen; FQ21).
+  4. Else if enrolled and `completedItems > 0` → `router.navigate` to first incomplete accessible aula (FQ20).
+  5. Else → overview (not enrolled / not started).
+  Resume is **default entry only** — tree clicks, lesson URLs, and overview remain available afterward.
+- `openOverview()` / course-title navigate to `/courses/:id?overview=1` and clear aula selection.
 - Markdown rendering uses an Angular-compatible renderer and sanitizes generated HTML before display.
+
+### Architecture questions (AQ)
+
+| # | Question | Status | Answer |
+|---|----------|--------|--------|
+| **AQ3** | Resume in Angular only vs catalog deep-links vs new API field? | answered | Angular `CourseViewComponent` only; use existing study progress + `CourseDetailResponse.teaching` / `enrolled`. No API/schema change. |
+| **AQ4** | How to suppress resume for Visão geral without fighting redirect? | answered | Query `overview=1` on course root; resume runs only when that query is absent. |
 
 ### Routes
 
 | Route | Purpose / access |
 |-------|------------------|
 | `/` | Student catalog: **Matriculado**, **Disponível / Solicitado** |
-| `/courses/:courseId` | Study **overview** (**Sobre o curso** / **Sobre o autor**); enrolled student or teacher |
+| `/courses/:courseId` | Study **overview** by default for not enrolled / not started / teacher / `?overview=1`; **open-course resume** redirects enrolled in-progress/concluded students (FQ20–FQ22) |
 | `/courses/:courseId/lessons/:itemId` | Selected aula; overview hidden; enrolled student if unlocked, or course teacher |
 | `/teacher` | Courses taught by current user |
 | `/teacher/courses/new` | Create course; authenticated |
@@ -278,6 +315,83 @@ No redirects are retained for old `/courses/new`, `/courses/:id/edit`, `/courses
 - [x] **TC19** Angular: rollback, progress bar, finish screen, certificate, catalog badge.
 
 **Implementation notes:** OpenPDF on-demand PDF; enrollment status remains `ENROLLED` when concluded; finish screen replaces aula panel at 100%.
+
+### 2026-07-19 — Markdown inline rendering in study view
+
+**Status:** `done`
+
+**Development approval:** approved 2026-07-19 — tasks: T34, T35
+
+**Scope:** Bug: aula markdown like `Primeira **aula** do curso` shows literal `**aula**`. The study renderer only supports headings, paragraphs, and `course-asset:` images. Extend it to common constructs (**FQ23**): bold, italic, inline code, safe links, lists, fenced code blocks. HTML stripping / sanitization stays.
+
+**Impact on other features:** Course edit gallery embeds (`course-asset:`) unchanged. Teacher editor stays raw markdown. No API/schema change.
+
+**Architecture:** Angular-only — extend `course-markdown.renderer.ts` (pure functions, existing escape-first pipeline):
+- Inline pass after escaping: `**`/`__` → `<strong>`, `*`/`_` → `<em>`, `` ` `` → `<code>`, `[text](http(s)://…)` → `<a target="_blank" rel="noopener noreferrer">`; non-http(s) link targets render as text.
+- Block pass: `- `/`* ` → `<ul><li>`, `1. ` → `<ol><li>`, ``` fenced blocks → `<pre><code>` (no inline parsing inside code).
+- Images keep priority over other inline rules; raw HTML still removed before parsing.
+
+**Feature checklist:**
+
+- [x] **FC27** `**bold**`, `*italic*`, and `` `code` `` render as HTML in study aulas (**FQ23**).
+- [x] **FC28** `[links](https://…)` render safely (`noopener`, new tab); non-http(s) schemes are not linked.
+- [x] **FC29** Lists and fenced code blocks render; embedded HTML remains stripped; `course-asset:` images unaffected.
+
+**Tasks:**
+
+- [x] **T34** Extend `renderCourseMarkdown` inline pass: bold, italic, inline code, safe links (FC27, FC28).
+- [x] **T35** Extend block pass: unordered/ordered lists and fenced code blocks; keep sanitization and image handling (FC29).
+
+**Test coverage:**
+
+- [x] **TC25** Renderer specs: emphasis/code/link happy paths + unsafe link and raw HTML rejection (T34).
+- [x] **TC26** Renderer specs: lists, fenced code, mixed blocks with `course-asset:` images (T35).
+
+**Implementation notes:** Escape-first then placeholders for inline code and fenced blocks so emphasis is not applied inside code.
+
+---
+
+### 2026-07-19 — Resume in-progress course at current aula
+
+**Status:** `done`
+
+**Development approval:** approved 2026-07-19 — tasks: T31, T32, T33
+
+**Scope:** **Open-course default landing only.** When a student opens an enrolled course that is **in progress** (`completedItems > 0`, not concluded), land on the **current aula** (first incomplete accessible). Overview remains for **not enrolled** and **not started**. Concluded opens finish state. Teachers always get overview. Explicit **Visão geral** / title still opens overview. Students may always navigate to overview or any accessible/completed aula afterward — this does not restrict in-course navigation (**FQ20–FQ22** clarification). Revises **FQ19**.
+
+**Impact on other features:** Catalog links to `/courses/:id` resume into a lesson (or finish) when appropriate. **Visão geral** uses `?overview=1` so it does not fight resume. TC11 revised. Domain/catalog docs updated in T33.
+
+**Architecture:** Angular-only (**AQ3**, **AQ4**).
+- After study + course detail load on course root (no `itemId`): apply resume decision tree (overview query → teaching → concluded → in-progress → overview).
+- `openOverview()` / course title → `/courses/:id?overview=1`.
+- No API, schema, or catalog-link URL changes required (course root handles resume).
+
+**Feature checklist:**
+
+- [x] **FC21** Opening an in-progress enrolled course lands on the current aula, not overview (**FQ20**).
+- [x] **FC22** Not enrolled and not-started enrolled courses still show overview at `/courses/:id`.
+- [x] **FC23** Explicit **Visão geral** / course title still opens overview; student can open overview or completed aulas anytime after (**FQ20** clarification).
+- [x] **FC24** Opening a concluded course lands on finish / concluded study state (**FQ21**).
+- [x] **FC25** Teacher preview of own course lands on overview, no auto-resume (**FQ22**).
+- [x] **FC26** Wireframe + domain spec + feature catalog describe open-course resume vs free navigation.
+
+**Tasks:**
+
+- [x] **T31** Course root open-course resume: wait for study + detail; redirect in-progress students to first incomplete accessible aula; concluded → last completed aula (finish); skip when `?overview=1`, teaching, not enrolled, or not started (FC21, FC22, FC24, FC25).
+- [x] **T32** Explicit overview: `openOverview` / course title navigate with `?overview=1`; clear selection; specs for resume, suppress, teacher, concluded, not-started (FC23; revise TC11).
+- [x] **T33** Docs: domain-spec Visão geral / resume wording; feature-catalog Course study steps; wireframe already updated (FC26).
+
+**Test coverage:**
+
+- [x] **TC20** In-progress enrolled open of `/courses/:id` navigates to current aula lesson route (T31).
+- [x] **TC21** Not started / not enrolled stay on overview; no study-item auto-load for content (T31).
+- [x] **TC22** `?overview=1` and Visão geral / title keep overview even when in progress (T32).
+- [x] **TC23** Concluded open shows finish screen; teacher open stays on overview (T31).
+- [x] **TC24** Existing lesson-route and advance-after-complete specs remain green (T31–T32).
+
+**Implementation notes:** `resumePending` waits for both `findCourse` and study tree; `?overview=1` suppresses resume so Visão geral stays usable.
+
+---
 
 ### 2026-07-19 — Course overview before first aula
 

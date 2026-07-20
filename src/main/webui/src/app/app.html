@@ -7,9 +7,13 @@
         data-testid="visual-shell-brand"
         routerLinkActive="brand-active"
         [routerLinkActiveOptions]="{ exact: true }"
-        aria-label="Cursos — início">
-        <mat-icon fontIcon="school" aria-hidden="true"></mat-icon>
-        <span class="brand-name">Cursos</span>
+        [attr.aria-label]="branding().name + ' — início'">
+        @if (branding().logoUrl) {
+          <img class="brand-logo" [src]="branding().logoUrl!" [alt]="branding().name" />
+        } @else {
+          <img class="brand-mark" src="/brand-mark.svg" [alt]="branding().name" aria-hidden="true" />
+        }
+        <span class="brand-name">{{ branding().name }}</span>
       </a>
 
       <div class="grow-space" aria-hidden="true"></div>
@@ -86,8 +90,26 @@
 
   <footer class="main-footer" data-testid="visual-shell-footer">
     <div class="shell-inner footer-inner">
-      <span>© 2026 Cursos</span>
-      <a href="/openapi" target="_blank" rel="noopener noreferrer">OpenAPI</a>
+      <div class="footer-primary">
+        <span data-testid="footer-copyright">© {{ copyrightYear }} {{ branding().name }}</span>
+        <nav class="footer-links" aria-label="Rodapé">
+          @if (branding().supportUrl) {
+            <a [href]="branding().supportUrl!" target="_blank" rel="noopener noreferrer">Suporte</a>
+          }
+          @if (branding().docsUrl) {
+            <a [href]="branding().docsUrl!" target="_blank" rel="noopener noreferrer">Docs</a>
+          }
+          @if (branding().legalUrl) {
+            <a [href]="branding().legalUrl!" target="_blank" rel="noopener noreferrer">Legal</a>
+          }
+          @if (branding().showDeveloperLinks) {
+            <a href="/openapi" target="_blank" rel="noopener noreferrer" data-testid="footer-openapi">OpenAPI</a>
+          }
+        </nav>
+      </div>
+      @if (branding().credit) {
+        <span class="footer-credit" data-testid="footer-credit">{{ branding().credit }}</span>
+      }
     </div>
   </footer>
 </div>

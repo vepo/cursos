@@ -1,6 +1,6 @@
 # Cursos — Domain Specification
 
-Canonical domain language for **Cursos**, an online course platform. Developers, reviewers, and AI agents must align code, tests, and UI copy with this document.
+Canonical domain language for **Learn** (online course platform; Maven artifact and packages remain `cursos`). Developers, reviewers, and AI agents must align code, tests, and UI copy with this document.
 
 **Related references:** [ARCHITECTURE.md](../ARCHITECTURE.md) (technical patterns), [feature-catalog.md](feature-catalog.md) (routes and UI flows).
 
@@ -10,7 +10,7 @@ Canonical domain language for **Cursos**, an online course platform. Developers,
 
 ## Context
 
-Cursos lets **teachers** create **courses** with ordered **course items** (markdown, image, video). **Students** discover courses in the **catalog**, **request enrollment**, and track **progress** as they complete items. **Categories** organize the catalog. Identity and login live in **Passport**; Cursos stores a local **identity** mirror keyed by Passport user id.
+Cursos (product name **Learn**) lets **teachers** create **courses** with ordered **course items** (markdown, image, video). **Students** discover courses in the **catalog**, **request enrollment**, and track **progress** as they complete items. **Categories** organize the catalog. Identity and login live in **Passport**; Learn stores a local **identity** mirror keyed by Passport user id. **Branding** (white-label name, logo, colors, footer) is config-driven per deployment.
 
 ```mermaid
 erDiagram
@@ -33,7 +33,7 @@ Cursos is a **modular monolith**: one deployable, feature packages under `dev.ve
 
 | Context | Packages | May depend on |
 |---------|----------|---------------|
-| **Platform** | `infra` | JDK/Jakarta only |
+| **Platform** | `infra`, `branding` | JDK/Jakarta only |
 | **Identity & access** | `auth`, `identity` | platform |
 | **Catalog** | `catalog` | platform, identity, course, enrollment, progress |
 | **Course** | `course` (incl. `course.category`, `course.item`) | platform, identity |
@@ -61,13 +61,15 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 
 | Term | Meaning | Code / notes |
 |------|---------|--------------|
-| **Cursos** | The product (online course platform). | UI title |
+| **Learn** | The product (online course platform). Display name; white-label via `learn.brand.*`. | UI title, footer, `GET /api/branding` |
+| **Cursos** | Technical name (repo, Maven artifact, packages, Docker image `vepo/cursos`). | Not user-facing by default |
+| **Branding** | Deployment-level white-label: name, logo, colors, footer links, credit. | `BrandProperties`, `BrandingResponse` |
 | **Passport** | External identity service issuing JWT. | Login at `:8080`; not part of Cursos codebase |
 | **Identity** | Local mirror of a Passport user (id, name, email). | `Identity`, `tb_identities`; keyed by `passport_user_id` |
 | **Teacher** | User who **created** a course — not a global role. | `Course.teacherId`; UI **Professor**; area **Ensinar** |
 | **Student** | User with an **enrollment** on a course. | `Enrollment.studentId`; UI **Aluno** / section **Matriculado** |
 | **Session** | Authenticated state via Passport JWT Bearer token. | Angular `auth.interceptor.ts` |
-| **Cursos admin** | Passport role for platform administration in Cursos. | JWT group `cursos.admin`; controls **Admin** menu and category writes |
+| **Cursos admin** | Passport role for platform administration in Learn. | JWT group `cursos.admin`; controls **Admin** menu and category writes |
 
 ### Catalog
 
@@ -77,9 +79,10 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Ensinando** | Catalog section: courses the current user teaches (draft or published). | Catalog `teaching` bucket; actions Visualizar / Editar / Publicar / Despublicar |
 | **Teaching courses** | Courses the current user teaches. | Also under **Ensinar → Meus cursos** |
 | **Author description** | Public biography of a course teacher, owned by Passport User. | Live-loaded for course summary; not Passport Profile (roles) |
-| **Sobre o curso** | Course summary panel on the study **overview** (course root). | Course `summary`; hidden while an aula is open |
+| **Sobre o curso** | Course summary panel on the study **overview**. | Course `summary`; hidden while an aula is open |
 | **Sobre o autor** | Author panel on the study **overview** with live name and description. | Passport public author projection; hidden while an aula is open |
-| **Visão geral** | Sidebar entry that opens the course overview (`/courses/:id`) before aulas. | Study tree; above ordered aulas |
+| **Visão geral** | Sidebar entry that opens the course **overview** (`/courses/:id?overview=1`) so the student can read course/author panels anytime. | Study tree; above ordered aulas; suppresses open-course resume |
+| **Open-course resume** | Default landing when a student **opens** an enrolled course: continue at the **current aula** (first incomplete accessible) if in progress; finish state if concluded; **overview** if not started or not enrolled. Teachers always land on overview. Does not restrict later navigation. | `CourseViewComponent` on `/courses/:id` without `?overview=1` |
 | **Matriculado** | Catalog section: courses where enrollment status is **ENROLLED**. | `GET /catalog/enrolled` |
 | **Disponível / Solicitado** | Catalog section: published courses available to request, plus courses with **REQUESTED** enrollment by current user. | `GET /catalog/available`; UI **Disponível / Solicitado** |
 | **Category** | Label grouping courses (e.g. Programming, Design). | `Category`, `tb_categories`; UI **Categoria** |
@@ -116,6 +119,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Course item** | Single ordered piece of course content. | `CourseItem`, `tb_course_items` |
 | **Item order** | Zero-based position determining display sequence. | `CourseItem.sortOrder` |
 | **Markdown item** | Course item type storing rich text; may reference gallery assets. | `CourseItemType.MARKDOWN` |
+| **Study markdown** | Sanitized HTML rendered from markdown in the student study view (headings, bold/italic, inline code, safe http(s) links, lists, fenced code, `course-asset:` images). Raw HTML is stripped. | `course-markdown.renderer.ts` |
 | **Image item** | Course item type storing binary image in `tb_course_resources` (aula media). | `CourseItemType.IMAGE` |
 | **Video item** / **Video aula** | Course item type storing binary video in PostgreSQL. | `CourseItemType.VIDEO`; seekable via **Playback ticket** |
 | **Link item** / **Link aula** | Course item type with an external HTTPS URL and optional description. | `CourseItemType.LINK`; UI **Abrir recurso** |
@@ -142,9 +146,10 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Approve enrollment** | Teacher accepts **REQUESTED** → **ENROLLED**. | UI **Aprovar** |
 | **Reject enrollment** | Teacher declines **REQUESTED** → **REJECTED**. | UI **Recusar** |
 | **Direct enrollment** | Teacher enrolls a student by email without request step. | UI **Matricular aluno**; creates **ENROLLED** immediately |
-| **REQUESTED** | Enrollment awaiting teacher decision. | `EnrollmentStatus.REQUESTED` |
-| **ENROLLED** | Active student — may view items and track progress. | `EnrollmentStatus.ENROLLED` |
-| **REJECTED** | Declined enrollment request. | `EnrollmentStatus.REJECTED` |
+| **REQUESTED** | Enrollment awaiting teacher decision. | `EnrollmentStatus.REQUESTED`; UI badge **Solicitado** |
+| **ENROLLED** | Active student — may view items and track progress. | `EnrollmentStatus.ENROLLED`; UI badge **Matriculado** |
+| **REJECTED** | Declined enrollment request. | `EnrollmentStatus.REJECTED`; UI badge **Recusado** |
+| **Enrollment admin** | Teacher screen grouping enrollments by status with pending counts. | Route `/teacher/courses/:id/students`; sections **Solicitações pendentes** / **Alunos matriculados** / **Recusados** |
 
 ### Progress
 
@@ -215,6 +220,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 5. **Rollback progress** clears completion for the selected aula and every later aula by item order; earlier aulas stay complete; later aulas relock until predecessors are complete again. Discussions remain stored.
 6. When completed items equal total items (and total > 0), the enrollment is **concluded** (`concluded_at` = latest 100% instant). Rollback below 100% clears `concluded_at`.
 7. **Course certificate** download is allowed only while the enrollment is concluded; PDF is generated on demand.
+8. **Open-course resume** (default landing only): enrolled student opening `/courses/:id` without `?overview=1` continues at the first incomplete accessible aula when `completedItems > 0`; concluded enrollments open the finish state; not started / not enrolled / teacher preview land on **Visão geral** overview. Explicit **Visão geral** and lesson-tree navigation remain available afterward.
 
 ### Catalog
 
@@ -227,7 +233,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 
 1. A course has at most one **course cover**, referencing a **course image asset** owned by that course.
 2. Gallery assets are not course items and do not affect progress or sequential unlock.
-3. Markdown may embed only `course-asset:{id}` references to assets of the same course; external image URLs are rejected by the renderer.
+3. Markdown may embed only `course-asset:{id}` references to assets of the same course; external image URLs are rejected by the renderer. Study markdown also renders bold, italic, inline code, safe http(s) links, lists, and fenced code blocks; raw HTML is stripped.
 4. Deleting an asset is blocked while it is the cover or referenced by any markdown body on that course.
 5. Image bytes are served via short-lived signed URLs (no Bearer on `<img>`).
 
@@ -356,7 +362,18 @@ erDiagram
 | Approve | Aprovar |
 | Reject | Recusar |
 | Direct enroll | Matricular aluno |
+| Pending requests section | Solicitações pendentes |
+| Enrolled students section | Alunos matriculados |
+| Rejected requests section | Recusados |
+| REQUESTED badge | Solicitado |
+| ENROLLED badge | Matriculado / Já matriculado (directory result) |
+| REJECTED badge | Recusado |
 | Progress | Progresso |
+| Progress coaching | Progresso do curso (teacher) |
+| Class aggregate | conclusão média / concluiu o curso |
+| Last activity | última atividade |
+| Mark complete (teacher) | Marcar concluída |
+| Rollback progress (teacher) | Desfazer |
 | Mark complete | Concluir aula |
 | Rollback progress | Desfazer progresso |
 | Course finish screen | Curso concluído |
@@ -371,6 +388,8 @@ erDiagram
 | Hide comment | Ocultar comentário |
 | Restore comment | Restaurar comentário |
 | Course overview | Visão geral |
+| Open-course resume | Continuar na aula atual (default open) |
+| Study markdown | (rendered HTML — no separate button label) |
 | Sobre o curso | Sobre o curso |
 | Sobre o autor | Sobre o autor |
 

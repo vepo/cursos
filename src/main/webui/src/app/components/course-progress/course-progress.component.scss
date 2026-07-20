@@ -1,1 +1,120 @@
-article { margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #d7dde5; }
+.page-title-context {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.message {
+  color: #3fb950;
+  margin: 0 0 0.5rem;
+}
+
+.error {
+  margin: 0 0 0.5rem;
+}
+
+.empty-state {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.class-aggregate {
+  color: var(--color-text-muted);
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.progress-section {
+  h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.05rem;
+  }
+}
+
+.student-progress-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.student-progress-row {
+  + .student-progress-row {
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+.student-progress-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.expand-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  color: var(--color-text-muted);
+}
+
+.student-progress-identity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.last-activity {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.student-progress-metrics {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.progress-counts {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-width: 6.5rem;
+  text-align: right;
+}
+
+.aula-checklist {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0 0 0 1.75rem;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+
+    + li {
+      border-top: 1px solid var(--color-border);
+    }
+  }
+}
+
+.aula-status {
+  flex-shrink: 0;
+  width: 1rem;
+  text-align: center;
+}
+
+.aula-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.aula-actions {
+  flex-shrink: 0;
+}

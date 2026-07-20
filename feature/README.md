@@ -10,7 +10,8 @@ One markdown file per **high-level capability**: `feature/<feature-slug>.md` (ke
 |------------|------|--------|
 | Cursos platform MVP | [cursos-platform.md](cursos-platform.md) | done |
 | Student study experience & teacher area | [student-study-experience.md](student-study-experience.md) | done |
-| UI visual shell | [ui-visual-shell.md](ui-visual-shell.md) | done (GitHub-dark) |
+| UI visual shell | [ui-visual-shell.md](ui-visual-shell.md) | done (superseded palette by Learn) |
+| Learn productization | [learn-productization.md](learn-productization.md) | done |
 | Account settings | [account-settings.md](account-settings.md) | done |
 | Course authoring UX | [course-authoring-ux.md](course-authoring-ux.md) | done |
 | Git course sync | [git-course-sync.md](git-course-sync.md) | architecture-ready (post-MVP) |

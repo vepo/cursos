@@ -1,41 +1,116 @@
 <main class="app-shell-main nested-page" data-testid="shell-main">
   <header class="page-header">
-    <h1 class="page-title" data-testid="page-title">Alunos</h1>
+    <h1 class="page-title" data-testid="page-title">
+      Alunos
+      @if (courseTitle) {
+        <span class="page-title-context">— {{ courseTitle }}</span>
+      }
+    </h1>
     <div class="page-actions" data-testid="page-actions">
+      <a mat-button routerLink="/teacher">Voltar</a>
       <a mat-button [routerLink]="['/courses', courseId]">Curso</a>
+      <a mat-button [routerLink]="['/teacher/courses', courseId, 'progress']">Progresso</a>
     </div>
   </header>
 
-  <section>
-    <h2>Inscrições</h2>
-    <ul>
-      @for (enrollment of enrollments; track enrollment.id) {
-        <li>
-          <strong>{{ enrollment.studentName }}</strong>
-          ({{ enrollment.studentEmail }}) — {{ enrollment.status }}
-          @if (enrollment.status === 'REQUESTED') {
-            <button mat-button type="button" (click)="approve(enrollment)">Aprovar</button>
-            <button mat-button type="button" (click)="reject(enrollment)">Recusar</button>
-          }
-        </li>
-      }
-    </ul>
+  @if (message) {
+    <p class="message" role="status">{{ message }}</p>
+  }
+  @if (error) {
+    <p class="error" role="alert">{{ error }}</p>
+  }
+
+  <section class="card students-section">
+    <h2>Solicitações pendentes ({{ pendingRequests.length }})</h2>
+    @if (pendingRequests.length === 0) {
+      <p class="empty-state">Nenhuma solicitação pendente.</p>
+    } @else {
+      <ul class="student-list">
+        @for (enrollment of pendingRequests; track enrollment.id) {
+          <li>
+            <span class="student-identity">
+              <strong>{{ enrollment.studentName }}</strong>
+              <span class="student-email">{{ enrollment.studentEmail }}</span>
+            </span>
+            <span class="student-actions">
+              <button mat-stroked-button type="button" data-testid="approve-enrollment"
+                      [disabled]="actionInFlight" (click)="approve(enrollment)">Aprovar</button>
+              <button mat-button type="button" data-testid="reject-enrollment"
+                      [disabled]="actionInFlight" (click)="reject(enrollment)">Recusar</button>
+            </span>
+          </li>
+        }
+      </ul>
+    }
   </section>
 
-  <section>
-    <h2>Adicionar aluno</h2>
-    <mat-form-field appearance="outline" class="full">
-      <mat-label>Buscar no Passport</mat-label>
-      <input matInput [(ngModel)]="query" (keyup.enter)="search()" />
-    </mat-form-field>
-    <button mat-stroked-button type="button" (click)="search()">Buscar</button>
-    <ul>
-      @for (user of matches; track user.id) {
-        <li>
-          {{ user.name }} · {{ user.email }}
-          <button mat-button type="button" (click)="enroll(user)">Matricular</button>
-        </li>
-      }
-    </ul>
+  <section class="card students-section">
+    <h2>Alunos matriculados ({{ enrolledStudents.length }})</h2>
+    @if (enrolledStudents.length === 0) {
+      <p class="empty-state">Nenhum aluno matriculado.</p>
+    } @else {
+      <ul class="student-list">
+        @for (enrollment of enrolledStudents; track enrollment.id) {
+          <li>
+            <span class="student-identity">
+              <strong>{{ enrollment.studentName }}</strong>
+              <span class="student-email">{{ enrollment.studentEmail }}</span>
+            </span>
+            <span class="status-badge status-badge--enrolled">{{ statusLabel(enrollment.status) }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  @if (rejectedRequests.length > 0) {
+    <section class="card students-section">
+      <h2>Recusados ({{ rejectedRequests.length }})</h2>
+      <ul class="student-list">
+        @for (enrollment of rejectedRequests; track enrollment.id) {
+          <li>
+            <span class="student-identity">
+              <strong>{{ enrollment.studentName }}</strong>
+              <span class="student-email">{{ enrollment.studentEmail }}</span>
+            </span>
+            <span class="status-badge status-badge--rejected">{{ statusLabel(enrollment.status) }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="card students-section">
+    <h2>Matricular aluno</h2>
+    <div class="directory-search">
+      <mat-form-field appearance="outline" class="full">
+        <mat-label>Buscar no Passport</mat-label>
+        <input matInput [(ngModel)]="query" (keyup.enter)="search()" />
+      </mat-form-field>
+      <button mat-stroked-button type="button" (click)="search()">Buscar</button>
+    </div>
+    @if (searched && matches.length === 0) {
+      <p class="empty-state">Nenhum usuário encontrado.</p>
+    }
+    @if (matches.length > 0) {
+      <ul class="student-list">
+        @for (user of matches; track user.id) {
+          <li data-testid="directory-result">
+            <span class="student-identity">
+              <strong>{{ user.name }}</strong>
+              <span class="student-email">{{ user.email }}</span>
+            </span>
+            @if (directoryStatus(user) === 'ENROLLED') {
+              <span class="status-badge status-badge--enrolled">Já matriculado</span>
+            } @else if (directoryStatus(user) === 'REQUESTED') {
+              <span class="status-badge status-badge--requested">Solicitado</span>
+            } @else {
+              <button mat-stroked-button type="button" data-testid="direct-enroll"
+                      [disabled]="actionInFlight" (click)="enroll(user)">Matricular</button>
+            }
+          </li>
+        }
+      </ul>
+    }
   </section>
 </main>

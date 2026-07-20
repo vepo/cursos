@@ -5,6 +5,8 @@ import { provideRouter, Router } from '@angular/router';
 import { JWT_OPTIONS, JwtHelperService } from '@auth0/angular-jwt';
 import { of } from 'rxjs';
 
+import { signal } from '@angular/core';
+
 import { AppComponent } from './app';
 import { routes } from './app.routes';
 import { CatalogApi } from './generated/api/catalog.service';
@@ -12,7 +14,45 @@ import { CategoriesApi } from './generated/api/categories.service';
 import { CoursesApi } from './generated/api/courses.service';
 import { EnrollmentsApi } from './generated/api/enrollments.service';
 import { AuthService } from './services/auth.service';
+import { Branding, BrandingService } from './services/branding.service';
 import { VISUAL_SHELL_TOKENS } from '../theme/visual-shell-tokens.contract';
+
+function brandingProvider(overrides: Partial<Branding> = {}): {
+  provide: typeof BrandingService;
+  useValue: Pick<BrandingService, 'branding' | 'load' | 'apply'>;
+} {
+  const value: Branding = {
+    name: 'Learn',
+    tagline: 'Aprenda no seu ritmo',
+    logoUrl: null,
+    faviconUrl: null,
+    accent: VISUAL_SHELL_TOKENS['--color-accent'],
+    headerBg: VISUAL_SHELL_TOKENS['--color-header'],
+    onChrome: VISUAL_SHELL_TOKENS['--color-on-chrome'],
+    pageBg: VISUAL_SHELL_TOKENS['--color-main-bg'],
+    surface: VISUAL_SHELL_TOKENS['--color-surface'],
+    text: VISUAL_SHELL_TOKENS['--color-text'],
+    textMuted: VISUAL_SHELL_TOKENS['--color-text-muted'],
+    link: VISUAL_SHELL_TOKENS['--color-link'],
+    border: VISUAL_SHELL_TOKENS['--color-border'],
+    danger: VISUAL_SHELL_TOKENS['--color-danger'],
+    supportUrl: null,
+    docsUrl: null,
+    legalUrl: null,
+    credit: 'Powered by Learn',
+    showDeveloperLinks: true,
+    ...overrides
+  };
+  const brandingSignal = signal(value);
+  return {
+    provide: BrandingService,
+    useValue: {
+      branding: () => brandingSignal.asReadonly(),
+      load: () => Promise.resolve(),
+      apply: () => undefined
+    }
+  };
+}
 
 function authStub(roles: string[] = [], loggedIn = true): jasmine.SpyObj<AuthService> {
   const auth = jasmine.createSpyObj('AuthService', [
@@ -35,9 +75,15 @@ function authStub(roles: string[] = [], loggedIn = true): jasmine.SpyObj<AuthSer
   return auth;
 }
 
-function catalogProviders(catalog: object, roles: string[] = [], loggedIn = true) {
+function catalogProviders(
+  catalog: object,
+  roles: string[] = [],
+  loggedIn = true,
+  brandingOverrides: Partial<Branding> = {}
+) {
   return [
     { provide: AuthService, useValue: authStub(roles, loggedIn) },
+    brandingProvider(brandingOverrides),
     { provide: JWT_OPTIONS, useValue: JWT_OPTIONS },
     JwtHelperService,
     {
@@ -448,11 +494,11 @@ describe('Visual shell header (T22)', () => {
 
     const background = getComputedStyle(header).backgroundColor;
     expect(cssColorEquals(background, VISUAL_SHELL_TOKENS['--color-header']))
-      .withContext('header background uses --color-header (#010409)')
+      .withContext('header background uses --color-header')
       .toBeTrue();
   });
 
-  it('shouldShowCursosBrandLinkingHome', async () => {
+  it('shouldShowLearnBrandLinkingHome', async () => {
     const fixture = await createApp(true);
     const header = fixture.nativeElement.querySelector(
       '[data-testid="visual-shell-header"], header.main-header'
@@ -463,12 +509,12 @@ describe('Visual shell header (T22)', () => {
     }
 
     const brand = header.querySelector('a.brand, [data-testid="visual-shell-brand"]') as HTMLAnchorElement | null;
-    expect(brand).withContext('Cursos brand link').not.toBeNull();
+    expect(brand).withContext('Learn brand link').not.toBeNull();
     if (!brand) {
       return;
     }
 
-    expect((brand.textContent ?? '').replace(/\s+/g, ' ').trim()).toContain('Cursos');
+    expect((brand.textContent ?? '').replace(/\s+/g, ' ').trim()).toContain('Learn');
 
     const hrefAttr = brand.getAttribute('routerLink')
       ?? brand.getAttribute('ng-reflect-router-link')
@@ -476,18 +522,15 @@ describe('Visual shell header (T22)', () => {
       ?? '';
     expect(hrefAttr === '/' || hrefAttr.endsWith('/')).withContext('brand links home').toBeTrue();
 
-    const link = VISUAL_SHELL_TOKENS['--color-link'];
+    const onChrome = VISUAL_SHELL_TOKENS['--color-on-chrome'];
     const brandColor = getComputedStyle(brand).color;
     const nameEl = brand.querySelector('.brand-name') as HTMLElement | null;
     const nameColor = nameEl ? getComputedStyle(nameEl).color : brandColor;
-    const iconEl = brand.querySelector('mat-icon, .mat-icon') as HTMLElement | null;
-    const iconColor = iconEl ? getComputedStyle(iconEl).color : brandColor;
 
-    const linkVisible = cssColorEquals(brandColor, link)
-      || cssColorEquals(nameColor, link)
-      || cssColorEquals(iconColor, link);
-    expect(linkVisible)
-      .withContext('Cursos brand uses developer link blue (#58a6ff)')
+    const chromeVisible = cssColorEquals(brandColor, onChrome)
+      || cssColorEquals(nameColor, onChrome);
+    expect(chromeVisible)
+      .withContext('Learn brand uses --color-on-chrome on ink header')
       .toBeTrue();
   });
 
@@ -514,7 +557,7 @@ describe('Visual shell header (T22)', () => {
       .toMatch(/Sair/i);
   });
 
-  it('shouldExposePersistentFooterWithOpenApiLink', async () => {
+  it('shouldExposePersistentFooterWithBrandAndGatedOpenApiLink', async () => {
     const fixture = await createApp(true);
     const root = fixture.nativeElement as HTMLElement;
     const footer = root.querySelector(
@@ -525,9 +568,15 @@ describe('Visual shell header (T22)', () => {
       return;
     }
 
-    expect(footer.textContent).toMatch(/Cursos/);
-    const openApi = footer.querySelector('a[href="/openapi"]') as HTMLAnchorElement | null;
-    expect(openApi).withContext('OpenAPI footer link').not.toBeNull();
+    expect(footer.textContent).toMatch(/Learn/);
+    expect(footer.querySelector('[data-testid="footer-copyright"]')?.textContent)
+      .toMatch(/Learn/);
+    expect(footer.querySelector('[data-testid="footer-credit"]')?.textContent)
+      .toMatch(/Powered by Learn/);
+    const openApi = footer.querySelector(
+      'a[href="/openapi"], [data-testid="footer-openapi"]'
+    ) as HTMLAnchorElement | null;
+    expect(openApi).withContext('OpenAPI when showDeveloperLinks').not.toBeNull();
   });
 
   it('shouldScrollOnlyPageContentInsideFixedShell', async () => {
@@ -588,8 +637,8 @@ describe('Visual shell header (T22)', () => {
     }
 
     const brand = header.querySelector('a.brand, [data-testid="visual-shell-brand"]') as HTMLAnchorElement | null;
-    expect(brand).withContext('Cursos brand').not.toBeNull();
-    expect((brand?.textContent ?? '').replace(/\s+/g, ' ').trim()).toContain('Cursos');
+    expect(brand).withContext('Learn brand').not.toBeNull();
+    expect((brand?.textContent ?? '').replace(/\s+/g, ' ').trim()).toContain('Learn');
 
     const entrar = Array.from(header.querySelectorAll('a')).find(anchor =>
       /entrar/i.test(anchor.textContent ?? '')
@@ -664,7 +713,7 @@ describe('App shell landmarks and a11y (T27)', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('shouldKeepPrimaryTextContrastOnHeaderAgainstBlackShell', async () => {
+  it('shouldKeepPrimaryTextContrastOnHeaderAgainstInkShell', async () => {
     const fixture = await createApp();
     const header = fixture.nativeElement.querySelector(
       '[data-testid="visual-shell-header"]'
@@ -676,12 +725,12 @@ describe('App shell landmarks and a11y (T27)', () => {
 
     const style = getComputedStyle(header);
     expect(cssColorEquals(style.backgroundColor, VISUAL_SHELL_TOKENS['--color-header']))
-      .withContext('header uses black shell token')
+      .withContext('header uses ink shell token')
       .toBeTrue();
     expect(
-      cssColorEquals(style.color, VISUAL_SHELL_TOKENS['--color-text'])
+      cssColorEquals(style.color, VISUAL_SHELL_TOKENS['--color-on-chrome'])
       || cssColorEquals(style.color, VISUAL_SHELL_TOKENS['--color-text-muted'])
-    ).withContext('header text uses primary/muted light tokens on black').toBeTrue();
+    ).withContext('header text uses on-chrome tokens on ink').toBeTrue();
 
     const footer = fixture.nativeElement.querySelector(
       '[data-testid="visual-shell-footer"]'
@@ -689,7 +738,7 @@ describe('App shell landmarks and a11y (T27)', () => {
     expect(footer).withContext('footer landmark for contrast check').not.toBeNull();
     if (footer) {
       expect(cssColorEquals(getComputedStyle(footer).backgroundColor, VISUAL_SHELL_TOKENS['--color-header']))
-        .withContext('footer uses black shell token')
+        .withContext('footer uses ink shell token')
         .toBeTrue();
     }
   });

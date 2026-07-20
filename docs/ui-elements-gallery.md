@@ -25,6 +25,8 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | Element | Class | Use |
 |---------|-------|-----|
 | Status badge | `.status-badge`, `--published`, `--draft` | Course publication state |
+| Enrollment badge | `.status-badge`, `--requested`, `--enrolled`, `--rejected` | Enrollment status (Solicitado / Matriculado / Recusado) |
+| Progress bar | `.progress-bar`, `.progress-bar__fill` | Visual completion % (teacher coaching + study sidebar language) |
 
 ## Cards & media
 
