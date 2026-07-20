@@ -141,6 +141,33 @@ class LinkAndVideoAulaEndpointTest {
                .header("Content-Range", equalTo("bytes 0-9/64"))
                .header("Content-Type", equalTo("video/mp4"));
 
+        given().header("Range", "bytes=-10")
+               .when()
+               .get(url)
+               .then()
+               .statusCode(HttpStatus.SC_PARTIAL_CONTENT)
+               .header("Content-Range", equalTo("bytes 54-63/64"));
+
+        given().header("Range", "bytes=10-")
+               .when()
+               .get(url)
+               .then()
+               .statusCode(HttpStatus.SC_PARTIAL_CONTENT)
+               .header("Content-Range", equalTo("bytes 10-63/64"));
+
+        given().when()
+               .get(url)
+               .then()
+               .statusCode(HttpStatus.SC_OK)
+               .header("Accept-Ranges", equalTo("bytes"))
+               .header("Content-Type", equalTo("video/mp4"));
+
+        given().header("Range", "bytes=0-1,2-3")
+               .when()
+               .get(url)
+               .then()
+               .statusCode(HttpStatus.SC_REQUESTED_RANGE_NOT_SATISFIABLE);
+
         given().header("Range", "bytes=1000-1001")
                .when()
                .get(url)
