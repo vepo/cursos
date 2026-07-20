@@ -301,14 +301,18 @@ See [development-process.mdc](.cursor/rules/development-process.mdc).
 3. Entity → repository → service → endpoint → Angular.
 4. Update feature catalog and dev seed.
 
-## 14. Configuration (dev)
+## 14. Configuration
 
-| Property | Purpose |
-|----------|---------|
-| `quarkus.http.port` | 8083 |
-| `mp.jwt.verify.publickey.location` | Passport public key |
-| `mp.jwt.verify.issuer` | Passport issuer |
-| `cursos.passport.base-url` | http://localhost:8080 |
+Dev quick reference (full tables and prod env: [docs/configuration.md](docs/configuration.md); packaging: [docs/deployment.md](docs/deployment.md)):
+
+| Property / env | Purpose |
+|----------------|---------|
+| `%dev` `quarkus.http.port` | 8083 |
+| `JWT_ISSUER` / `mp.jwt.verify.issuer` | Passport issuer |
+| `MP_JWT_VERIFY_PUBLICKEY_LOCATION` | Passport public key (`%prod` file mount) |
+| `PASSPORT_API_URL` | Passport REST base (`http://localhost:8080` in dev) |
+| `CURSOS_MEDIA_SIGNING_SECRET` | HMAC for media tickets |
+| `learn.brand.*` / `LEARN_BRAND_*` | White-label branding |
 
 ## 15. Git package — implement last
 

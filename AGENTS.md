@@ -5,6 +5,8 @@ Read these before changing code or tests:
 | Document | Purpose |
 |----------|---------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Stack, packages, patterns, API map, naming, feature workflow |
+| [docs/deployment.md](docs/deployment.md) | Package, Docker image, runtime deps, production smoke |
+| [docs/configuration.md](docs/configuration.md) | Environment variables and `application.properties` |
 | [docs/domain-specification.md](docs/domain-specification.md) | Ubiquitous language, bounded contexts, invariants |
 | [docs/feature-catalog.md](docs/feature-catalog.md) | UI routes and navigation paths |
 | [docs/backlog.md](docs/backlog.md) | Ordered product backlog (ideas and priority) |
