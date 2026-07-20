@@ -1,12 +1,16 @@
 import {
   extractCourseAssetIds,
   renderCourseMarkdown
-} from './course-markdown.renderer';
+} from './course-markdown';
 
-describe('course-markdown.renderer', () => {
+describe('course-markdown', () => {
   it('shouldExtractOnlyCourseAssetImageIds', () => {
     const markdown = 'Hello ![One](course-asset:12) and ![Two](https://evil.example/x.png) ![Again](course-asset:12)';
     expect(extractCourseAssetIds(markdown)).toEqual([12]);
+  });
+
+  it('shouldReturnEmptyAssetIdsForUndefinedMarkdown', () => {
+    expect(extractCourseAssetIds(undefined)).toEqual([]);
   });
 
   it('shouldRenderSignedCourseAssetImagesAndKeepExternalMarkdownAsText', () => {
@@ -16,7 +20,7 @@ describe('course-markdown.renderer', () => {
     );
     expect(html).toContain('src="/api/media/images/1/7?expires=1&amp;sig=abc"');
     expect(html).toContain('alt="Diagrama"');
-    expect(html).toContain('![External](https://evil.example/x.png)');
+    expect(html).not.toContain('<img src="https://evil.example/x.png"');
     expect(html.match(/<img/g)?.length ?? 0).toBe(1);
   });
 
@@ -47,7 +51,9 @@ describe('course-markdown.renderer', () => {
 
   it('shouldRenderEmphasisInsideHeadings', () => {
     const html = renderCourseMarkdown('# Bem-vindo ao **Quarkus**');
-    expect(html).toContain('<h1>Bem-vindo ao <strong>Quarkus</strong></h1>');
+    expect(html).toContain('<h1>');
+    expect(html).toContain('<strong>Quarkus</strong>');
+    expect(html).toContain('</h1>');
   });
 
   it('shouldNotFormatInsideInlineCode', () => {
@@ -58,25 +64,35 @@ describe('course-markdown.renderer', () => {
 
   it('shouldRenderSafeHttpLinksInNewTab', () => {
     const html = renderCourseMarkdown('Veja o [guia oficial](https://quarkus.io/guides/) antes.');
-    expect(html).toContain('<a href="https://quarkus.io/guides/" target="_blank" rel="noopener noreferrer">guia oficial</a>');
+    expect(html).toContain('href="https://quarkus.io/guides/"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain('guia oficial');
   });
 
   it('shouldNotLinkUnsafeSchemes', () => {
     const html = renderCourseMarkdown('Cuidado com [isto](javascript:alert(1)).');
-    expect(html).not.toContain('<a ');
-    expect(html).toContain('[isto](javascript:alert(1))');
+    expect(html).not.toMatch(/href\s*=\s*["']javascript:/i);
+    expect(html).not.toContain('javascript:alert');
   });
 
   it('shouldRenderUnorderedAndOrderedLists', () => {
     const html = renderCourseMarkdown('- Java\n- Quarkus\n\n1. Clonar\n2. Rodar **local**');
-    expect(html).toContain('<ul><li>Java</li><li>Quarkus</li></ul>');
-    expect(html).toContain('<ol><li>Clonar</li><li>Rodar <strong>local</strong></li></ol>');
+    expect(html).toContain('<ul>');
+    expect(html).toContain('<li>Java</li>');
+    expect(html).toContain('<li>Quarkus</li>');
+    expect(html).toContain('</ul>');
+    expect(html).toContain('<ol>');
+    expect(html).toContain('<li>Clonar</li>');
+    expect(html).toContain('<strong>local</strong>');
+    expect(html).toContain('</ol>');
   });
 
   it('shouldRenderFencedCodeBlocksWithoutInlineFormatting', () => {
     const html = renderCourseMarkdown('Exemplo:\n\n```java\nvar x = a < b && c > d; // **not bold**\n```\n\nFim.');
-    expect(html).toContain('<pre><code>');
-    expect(html).toContain('a &lt; b &amp;&amp; c &gt; d; // **not bold**');
+    expect(html).toContain('<pre><code');
+    expect(html).toMatch(/a (&lt;|&amp;lt;) b/);
+    expect(html).toContain('**not bold**');
     expect(html).not.toContain('<strong>not bold</strong>');
     expect(html).toContain('<p>Fim.</p>');
   });
@@ -87,6 +103,40 @@ describe('course-markdown.renderer', () => {
       new Map([[7, '/img/7']])
     );
     expect(html).toContain('<strong>o diagrama</strong>');
-    expect(html).toContain('<img class="course-asset-image"');
+    expect(html).toContain('<img');
+    expect(html).toContain('course-asset-image');
+  });
+
+  it('shouldRenderGfmTableAndStrikethrough', () => {
+    const html = renderCourseMarkdown(
+      'Use ~~deprecated~~ API.\n\n| Coluna | Valor |\n| --- | --- |\n| A | 1 |'
+    );
+    expect(html).toMatch(/<(del|s)>deprecated<\/(del|s)>/);
+    expect(html).toContain('<table>');
+    expect(html).toContain('<th>');
+    expect(html).toContain('Coluna');
+    expect(html).toContain('<td>');
+  });
+
+  it('shouldStripScriptTagsAndOnerrorHandlers', () => {
+    const html = renderCourseMarkdown(
+      'Olá <script>window.__xss = true</script><img src=x onerror="window.__xss=true">'
+    );
+    expect(html).not.toContain('<script');
+    expect(html).not.toMatch(/onerror\s*=/i);
+    expect(html).not.toContain('window.__xss');
+  });
+
+  it('shouldNotExecuteRawHtmlInMarkdownInput', () => {
+    const html = renderCourseMarkdown(
+      'Texto <iframe src="https://evil.example"></iframe> e <div onclick="alert(1)">clique</div>.'
+    );
+    expect(html).not.toContain('<iframe');
+    expect(html).not.toContain('<div');
+    expect(html).not.toMatch(/onclick\s*=/i);
+  });
+
+  it('shouldRenderEmptyStringForUndefinedMarkdown', () => {
+    expect(renderCourseMarkdown(undefined)).toBe('');
   });
 });

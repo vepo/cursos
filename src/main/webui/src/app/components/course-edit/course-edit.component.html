@@ -216,16 +216,23 @@
               data-testid="link-description"></textarea>
           </mat-form-field>
         } @else {
-          <mat-form-field appearance="outline" class="full">
-            <mat-label>Conteúdo Markdown</mat-label>
-            <textarea
-              #markdownBody
-              matInput
-              rows="16"
-              [(ngModel)]="itemBody"
-              (ngModelChange)="markDirty()"
-              data-testid="item-body"></textarea>
-          </mat-form-field>
+          <div class="markdown-editor-split" data-testid="markdown-editor-split">
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Conteúdo Markdown</mat-label>
+              <textarea
+                #markdownBody
+                matInput
+                rows="16"
+                [(ngModel)]="itemBody"
+                (ngModelChange)="markDirty()"
+                data-testid="item-body"></textarea>
+            </mat-form-field>
+
+            <section class="markdown-preview" data-testid="markdown-preview" aria-label="Pré-visualização">
+              <h3>Pré-visualização</h3>
+              <div class="markdown" [innerHTML]="previewMarkdownHtml()"></div>
+            </section>
+          </div>
 
           <section class="image-gallery" data-testid="image-gallery">
             <h3>Galeria de imagens</h3>

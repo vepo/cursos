@@ -69,6 +69,63 @@
   }
 }
 
+.markdown-editor-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.markdown-preview {
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+
+  h3 {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+  }
+
+  .markdown {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+
+  .markdown :is(h1, h2, h3, h4, h5, h6) {
+    margin: 0.75rem 0 0.4rem;
+  }
+
+  .markdown :is(ul, ol) {
+    padding-left: 1.25rem;
+  }
+
+  .markdown pre {
+    overflow: auto;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  .markdown code {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.9em;
+  }
+
+  .markdown img.course-asset-image {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .markdown-editor-split {
+    grid-template-columns: 1fr;
+  }
+}
+
 .full {
   width: 100%;
   display: block;

@@ -21,6 +21,7 @@ import { CourseItemResponse } from '../../generated/model/courseItemResponse';
 import { CourseItemType } from '../../generated/model/courseItemType';
 import { ConfirmationService } from '../../services/confirmation.service';
 import { DirtyComponent } from '../../services/unsaved-changes.guard';
+import { renderCourseMarkdown } from '../../markdown/course-markdown';
 
 type EditorSelection = 'details' | 'new-item' | number;
 type ItemEditorType = Extract<CourseItemType, 'MARKDOWN' | 'LINK' | 'VIDEO'>;
@@ -188,6 +189,16 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       return false;
     }
     return this.items.find(item => item.id === this.selection)?.itemType === 'MARKDOWN';
+  }
+
+  previewMarkdownHtml(): string {
+    const urls = new Map<number, string>();
+    for (const asset of this.gallery) {
+      if (asset.id != null && asset.signedUrl) {
+        urls.set(asset.id, asset.signedUrl);
+      }
+    }
+    return renderCourseMarkdown(this.itemBody, urls);
   }
 
   get mediaFileSizeLabel(): string {

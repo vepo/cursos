@@ -52,3 +52,6 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 |---------|---------|-----|
 | Outline field | `mat-form-field appearance="outline"` + `.full` | All forms |
 | File upload | `.media-upload` | Video/image file pickers |
+| Markdown editor split | `.markdown-editor-split`, `data-testid="markdown-editor-split"` | Teacher source + live preview (side-by-side ≥900px) |
+| Markdown preview | `.markdown-preview`, `data-testid="markdown-preview"` | Marked + DOMPurify HTML preview |
+| Study markdown | `.markdown` | Sanitized Marked HTML in study view |

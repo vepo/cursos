@@ -18,7 +18,7 @@ import { CourseItemResponse } from '../../generated/model/courseItemResponse';
 import { StudyItemResponse } from '../../generated/model/studyItemResponse';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmationService } from '../../services/confirmation.service';
-import { extractCourseAssetIds, renderCourseMarkdown } from './course-markdown.renderer';
+import { extractCourseAssetIds, renderCourseMarkdown } from '../../markdown/course-markdown';
 
 @Component({
   selector: 'app-course-view',

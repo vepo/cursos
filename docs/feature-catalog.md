@@ -63,7 +63,7 @@ Teaching courses live under **Ensinar → Meus cursos**, not on the catalog home
 | Completion navigation | **Concluir aula** opens the next ordered aula after completion; at 100% the finish screen replaces aula content |
 | Finish / certificate | Finish screen offers **Baixar certificado** (authenticated PDF); catalog shows **Concluído** while status stays `ENROLLED` |
 | Teacher preview | Course teacher bypasses sequential lock; opening own course lands on overview (no auto-resume) |
-| Markdown | Study renders sanitized HTML (bold/italic/code/links/lists/fenced code + `course-asset:` images); raw markdown only in teacher editor |
+| Markdown | Study + teacher preview use [Marked](https://marked.js.org/) + DOMPurify (GFM); `course-asset:` images; raw markdown source in teacher editor |
 | Comments | Enrolled student or teacher on accessible aula |
 | Upvote | One per user/comment; toggle removes |
 | Hide / restore | Teacher only; students never see hidden comments |
@@ -72,7 +72,7 @@ Teaching courses live under **Ensinar → Meus cursos**, not on the catalog home
 
 | Type | Student view | Teacher edit |
 |------|--------------|--------------|
-| MARKDOWN | Rendered sanitized HTML | Markdown editor |
+| MARKDOWN | Rendered sanitized HTML (Marked) | Markdown source + live preview |
 | IMAGE | Inline image from media endpoint | Upload image |
 | VIDEO | Inline video player | Upload video |
 

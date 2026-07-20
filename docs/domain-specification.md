@@ -119,7 +119,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Course item** | Single ordered piece of course content. | `CourseItem`, `tb_course_items` |
 | **Item order** | Zero-based position determining display sequence. | `CourseItem.sortOrder` |
 | **Markdown item** | Course item type storing rich text; may reference gallery assets. | `CourseItemType.MARKDOWN` |
-| **Study markdown** | Sanitized HTML rendered from markdown in the student study view (headings, bold/italic, inline code, safe http(s) links, lists, fenced code, `course-asset:` images). Raw HTML is stripped. | `course-markdown.renderer.ts` |
+| **Study markdown** | Sanitized HTML rendered from Markdown in the student study view (and teacher live preview) via [Marked](https://marked.js.org/) + DOMPurify. Supports CommonMark/GFM constructs; `course-asset:` images via signed URLs; raw HTML stripped; external images rejected. | `src/app/markdown/course-markdown.ts` |
 | **Image item** | Course item type storing binary image in `tb_course_resources` (aula media). | `CourseItemType.IMAGE` |
 | **Video item** / **Video aula** | Course item type storing binary video in PostgreSQL. | `CourseItemType.VIDEO`; seekable via **Playback ticket** |
 | **Link item** / **Link aula** | Course item type with an external HTTPS URL and optional description. | `CourseItemType.LINK`; UI **Abrir recurso** |
@@ -233,7 +233,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 
 1. A course has at most one **course cover**, referencing a **course image asset** owned by that course.
 2. Gallery assets are not course items and do not affect progress or sequential unlock.
-3. Markdown may embed only `course-asset:{id}` references to assets of the same course; external image URLs are rejected by the renderer. Study markdown also renders bold, italic, inline code, safe http(s) links, lists, and fenced code blocks; raw HTML is stripped.
+3. Markdown may embed only `course-asset:{id}` references to assets of the same course; external image URLs are rejected by the renderer. Study markdown is produced by Marked + DOMPurify (GFM-capable); raw HTML is stripped/sanitized.
 4. Deleting an asset is blocked while it is the cover or referenced by any markdown body on that course.
 5. Image bytes are served via short-lived signed URLs (no Bearer on `<img>`).
 

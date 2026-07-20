@@ -33,6 +33,7 @@ Ordered ideas for Cursos that are **not yet** in active development (or are queu
 | — | promoted | **Git course sync** | course.yml → CourseItems; **implement after MVP** | `git-course-sync` | [git-course-sync.md](../feature/git-course-sync.md) |
 | — | done | **Certificates** | PDF on 100% progress — shipped in student-study-experience T23–T30 | `certificates` | [student-study-experience.md](../feature/student-study-experience.md) |
 | — | done | **Teacher progress coaching** | Rich `/teacher/courses/:id/progress`: per-aula breakdown, teacher adjust, aggregates | `teacher-progress-coaching` | [teacher-progress-coaching.md](../feature/teacher-progress-coaching.md) |
+| — | done | **Course markdown (Marked)** | Shared Marked + DOMPurify for study + teacher live preview | `course-markdown` | [course-markdown.md](../feature/course-markdown.md) |
 | 1 | idea | **Course search and filters** | Full-text search, filter by category on catalog | `course-search` | — |
 | 2 | idea | **Unpublish / archive course** | Hide without deleting enrollments | `course-lifecycle` | — |
 | 3 | idea | **Co-teachers** | Multiple teachers per course | `co-teachers` | — |

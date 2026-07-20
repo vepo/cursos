@@ -55,7 +55,7 @@ dev.vepo.cursos/
 └── infra/          # Cross-cutting HTTP, dev setup
 ```
 
-Frontend: `src/main/webui/src/app/` — `components/`, `services/`, `generated/`, `guards/`, `interceptors/`. Global dark-shell tokens and shared `.app-shell-page`, `.app-shell-sidebar`, and `.app-shell-main` layout classes live in `src/main/webui/src/styles.scss`; root header/drawer behavior lives in `app.*`.
+Frontend: `src/main/webui/src/app/` — `components/`, `services/`, `generated/`, `guards/`, `interceptors/`, `markdown/` (shared Marked + DOMPurify course markdown). Global dark-shell tokens and shared `.app-shell-page`, `.app-shell-sidebar`, and `.app-shell-main` layout classes live in `src/main/webui/src/styles.scss`; root header/drawer behavior lives in `app.*`.
 
 Bounded contexts: [docs/domain-specification.md](docs/domain-specification.md) §Bounded contexts.
 
@@ -262,6 +262,7 @@ Progress: `round(100 * completedItems / totalItems)`.
 - Catalog, study, teacher home, and course editor use the shared two-column shell classes. Sidebars hold category filters, the aula tree, teaching courses, or editor items respectively.
 - In study, `/courses/:id` is the **Visão geral** overview (**Sobre o curso** / **Sobre o autor**). Lesson routes hide those panels. Completing an aula advances to the next lesson route; the final aula remains selected.
 - Course edit, students, progress, and category administration render page titles/actions inside main and do not add nested `mat-toolbar` chrome.
+- Markdown aulas: study view and teacher **Pré-visualização** share `app/markdown/course-markdown.ts` ([Marked](https://marked.js.org/) + DOMPurify); teacher still edits raw Markdown source.
 - The menu has at most two levels: **Aprender**, **Ensinar**, **Conta**, **Admin**. Header display name links to **Minha conta**. Unauthenticated users see **Entrar** instead of the authenticated drawer controls.
 
 Visual design: [feature/learn-productization.md](feature/learn-productization.md), [feature/ui-visual-shell.md](feature/ui-visual-shell.md). Click paths: [docs/feature-catalog.md](docs/feature-catalog.md).

@@ -183,6 +183,26 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
     expect(fixture.nativeElement.querySelector('[data-testid="item-type"]')).not.toBeNull();
   });
 
+  it('shouldShowLiveMarkdownPreviewUpdatingWithItemBody', () => {
+    const component = fixture.componentInstance;
+    component.selectItem({
+      id: 1,
+      title: 'Intro',
+      itemType: 'MARKDOWN',
+      sortOrder: 0,
+      markdownBody: '# Hi'
+    });
+    fixture.detectChanges();
+
+    const preview = fixture.nativeElement.querySelector('[data-testid="markdown-preview"]');
+    expect(preview).withContext('Markdown editor shows live preview').not.toBeNull();
+    expect(preview?.querySelector('.markdown')?.innerHTML ?? '').toContain('<h1>');
+
+    component.itemBody = 'Texto com **negrito**.';
+    fixture.detectChanges();
+    expect(preview?.querySelector('.markdown')?.innerHTML ?? '').toContain('<strong>negrito</strong>');
+  });
+
   it('shouldTrackDirtyStateForLinkFields', () => {
     const component = fixture.componentInstance;
     component.selectNewItem();
