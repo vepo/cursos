@@ -5,6 +5,7 @@
     "ng": "ng",
     "start": "ng serve --hmr --configuration=development --port 4203",
     "build": "ng build --configuration=production",
+    "build:ui": "ng build --configuration=production",
     "prebuild": "npm run generate:api",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",

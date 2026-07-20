@@ -36,9 +36,8 @@ jobs:
       run: npm run generate:api
     - name: Build with Maven
       run: mvn -B package -DskipTests
-
     - name: Update dependency graph
-      uses: advanced-security/maven-dependency-submission-action@v5
+      uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
 
   docker:
     needs: build
@@ -62,9 +61,14 @@ jobs:
         node-version: '22'
         cache: npm
         cache-dependency-path: src/main/webui/package-lock.json
+    - name: Export OpenAPI schema
+      run: mvn -B test -Dtest=QuarkusSmokeTest
     - name: Install Frontend packages
       working-directory: src/main/webui
       run: npm ci
+    - name: Generate API client
+      working-directory: src/main/webui
+      run: npm run generate:api
     - name: Package JVM application (includes Quinoa UI)
       run: mvn -B package -DskipTests
     - name: Set up Docker Buildx
