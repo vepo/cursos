@@ -192,3 +192,76 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
     expect(component.dirty).toBeTrue();
   });
 });
+
+describe('CourseEditComponent new course full-width shell', () => {
+  let fixture: ComponentFixture<CourseEditComponent>;
+
+  beforeEach(async () => {
+    const coursesApi = jasmine.createSpyObj('CoursesApi', [
+      'findCourse', 'createCourse', 'updateCourse', 'publishCourse', 'unpublishCourse'
+    ]);
+    coursesApi.createCourse.and.returnValue(of({ id: 99, title: 'Novo', status: 'DRAFT' }));
+
+    const categoriesApi = jasmine.createSpyObj('CategoriesApi', {
+      listCategories: of([{ id: 1, name: 'Backend', slug: 'backend' }])
+    });
+    const courseItemsApi = jasmine.createSpyObj('CourseItemsApi', [
+      'createMarkdownItem', 'updateMarkdownItem', 'createLinkItem', 'updateLinkItem',
+      'uploadMediaItem', 'deleteCourseItem', 'reorderCourseItems'
+    ]);
+    const courseImagesApi = jasmine.createSpyObj('CourseImagesApi', {
+      listCourseImages: of([]),
+      uploadCourseImage: of({ id: 1, signedUrl: '/api/media/images/1/1' }),
+      setCourseCover: of({ id: 10, coverImageAssetId: 1, coverImageUrl: '/api/media/images/10/1' }),
+      clearCourseCover: of({ id: 10, coverImageAssetId: null }),
+      deleteCourseImage: of(null)
+    });
+    const gitApi = jasmine.createSpyObj('GitApi', {
+      getCourseGitStatus: of({ status: 'IDLE', remoteUrl: '', defaultBranch: 'main' }),
+      linkCourseGit: of({ status: 'IDLE' }),
+      syncCourseGit: of({ status: 'IDLE' })
+    });
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(false));
+    confirmation.confirmOrTrue.and.callFake((needs: boolean) => of(!needs));
+
+    await TestBed.configureTestingModule({
+      imports: [CourseEditComponent, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: CoursesApi, useValue: coursesApi },
+        { provide: CategoriesApi, useValue: categoriesApi },
+        { provide: CourseItemsApi, useValue: courseItemsApi },
+        { provide: CourseImagesApi, useValue: courseImagesApi },
+        { provide: GitApi, useValue: gitApi },
+        { provide: ConfirmationService, useValue: confirmation },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({}) }
+          }
+        }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CourseEditComponent);
+    fixture.detectChanges();
+  });
+
+  it('shouldOmitSidebarAndUseFullWidthGridOnNewCourse', () => {
+    const shell = fixture.nativeElement.querySelector('[data-testid="course-edit-shell"]') as HTMLElement | null;
+    expect(shell).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="shell-sidebar"]'))
+      .withContext('New course has no left item panel')
+      .toBeNull();
+    expect(fixture.componentInstance.isNew).toBeTrue();
+
+    const columns = getComputedStyle(shell!).gridTemplateColumns;
+    const trackCount = columns.trim() === 'none' ? 0 : columns.split(' ').filter(Boolean).length;
+    expect(trackCount)
+      .withContext(`New course shell must be one-column full width (got: ${columns})`)
+      .toBe(1);
+  });
+});

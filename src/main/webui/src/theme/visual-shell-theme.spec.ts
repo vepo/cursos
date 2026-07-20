@@ -73,6 +73,22 @@ describe('Visual shell theme contract (T21)', () => {
       .toBeTrue();
   });
 
+  it('shouldCollapseShellPageToOneColumnWhenSidebarIsAbsent', () => {
+    const page = document.createElement('div');
+    page.className = VISUAL_SHELL_LAYOUT.page;
+
+    const main = document.createElement('main');
+    main.className = VISUAL_SHELL_LAYOUT.main;
+    page.append(main);
+    document.body.appendChild(page);
+    fixtures.push(page);
+
+    const pageStyle = getComputedStyle(page);
+    expect(columnTrackCount(pageStyle.gridTemplateColumns))
+      .withContext('.app-shell-page without sidebar is one-column (full width)')
+      .toBe(1);
+  });
+
   it('shouldUseBlackTextAndVisibleFocusOnAccentFilledControls', () => {
     const control = document.createElement('button');
     control.type = 'button';

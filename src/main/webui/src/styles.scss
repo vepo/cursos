@@ -65,6 +65,11 @@ button:focus-visible {
   box-sizing: border-box;
 }
 
+/* Novo curso (and any page shell without a sidebar) must span the full content width. */
+.app-shell-page:not(:has(> .app-shell-sidebar)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .app-shell-sidebar {
   background: var(--color-sidebar);
   color: var(--color-on-chrome);

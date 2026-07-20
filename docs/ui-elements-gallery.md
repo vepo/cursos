@@ -7,6 +7,9 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | Element | Class / testid | Behavior |
 |---------|----------------|----------|
 | App shell | `.app-shell-root` | Column flex `100dvh`; header/footer fixed height; `.page-content` scrolls |
+| App shell page | `.app-shell-page` | Two-column grid when `.app-shell-sidebar` is present; one column (full width) when sidebar is omitted (e.g. Novo curso) |
+| App shell sidebar | `.app-shell-sidebar` | Left chrome column |
+| App shell main | `.app-shell-main` | Primary content column |
 | Header | `.main-header`, `data-testid="visual-shell-header"` | Sticky top; brand + menu (auth) or Entrar |
 | Footer | `.main-footer`, `data-testid="visual-shell-footer"` | Sticky bottom; copyright + OpenAPI link |
 | Navigation drawer | `.nav-menu-drawer` | Right-anchored; Conta includes Minha conta + Sair |
