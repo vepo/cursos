@@ -102,7 +102,7 @@ Exposed publicly as `GET /api/branding`. One deployment = one brand.
 | `learn.brand.support-url` | `LEARN_BRAND_SUPPORT_URL` | (empty) | Footer Support link |
 | `learn.brand.docs-url` | `LEARN_BRAND_DOCS_URL` | (empty) | Footer Docs link |
 | `learn.brand.legal-url` | `LEARN_BRAND_LEGAL_URL` | (empty) | Footer Legal link |
-| `learn.brand.credit` | `LEARN_BRAND_CREDIT` | `Powered by Learn` | Footer credit line |
+| `learn.brand.credit` | `LEARN_BRAND_CREDIT` | (empty) | Optional secondary footer credit line (author credit is always shown) |
 | `learn.brand.show-developer-links` | `LEARN_BRAND_SHOW_DEVELOPER_LINKS` | `false` (`true` in `%dev`) | Show OpenAPI in footer |
 
 ## OpenAPI / Swagger UI

@@ -39,7 +39,7 @@ function brandingProvider(overrides: Partial<Branding> = {}): {
     supportUrl: null,
     docsUrl: null,
     legalUrl: null,
-    credit: 'Powered by Learn',
+    credit: null,
     showDeveloperLinks: true,
     ...overrides
   };
@@ -628,8 +628,14 @@ describe('Visual shell header (T22)', () => {
     expect(footer.textContent).toMatch(/Learn/);
     expect(footer.querySelector('[data-testid="footer-copyright"]')?.textContent)
       .toMatch(/Learn/);
-    expect(footer.querySelector('[data-testid="footer-credit"]')?.textContent)
-      .toMatch(/Powered by Learn/);
+    const credit = footer.querySelector('[data-testid="footer-credit"]') as HTMLElement | null;
+    expect(credit?.textContent).toMatch(/Desenvolvido por/);
+    expect(credit?.textContent).toMatch(/Victor Osório/);
+    const authorLink = credit?.querySelector(
+      'a[href="https://github.com/vepo"]'
+    ) as HTMLAnchorElement | null;
+    expect(authorLink).withContext('author GitHub profile link').not.toBeNull();
+    expect(authorLink?.textContent?.trim()).toBe('Victor Osório');
     const openApi = footer.querySelector(
       'a[href="/openapi"], [data-testid="footer-openapi"]'
     ) as HTMLAnchorElement | null;

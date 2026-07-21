@@ -162,7 +162,15 @@
 }
 
 .footer-credit {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
   color: color-mix(in srgb, var(--color-on-chrome) 55%, transparent);
+}
+
+.footer-credit-extra {
+  opacity: 0.85;
 }
 
 .main-footer a {

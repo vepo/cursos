@@ -269,7 +269,7 @@ Progress: `round(100 * completedItems / totalItems)`.
 - Default **Learn** palette (light page, ink header, teal accent) as CSS custom properties in `styles.scss`; runtime white-label overrides via `GET /api/branding` (`learn.brand.*` / env).
 - Tokens include `--color-header`, `--color-on-chrome`, `--color-main-bg`, `--color-surface`, `--color-accent`, `--color-link`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-danger`.
 - `AppComponent` owns the single persistent header and authenticated navigation drawer. The drawer is right-anchored, closed by default at every breakpoint, role-filters **Admin**, and closes on toggle, leaf navigation, or Escape. On mobile it uses the full viewport width.
-- Sticky footer: copyright + brand name, optional Support/Docs/Legal/credit, OpenAPI only when `showDeveloperLinks`.
+- Sticky footer: copyright + brand name, **Desenvolvido por Victor Osório** → `https://github.com/vepo`, optional Support/Docs/Legal/secondary credit, OpenAPI only when `showDeveloperLinks`.
 - Catalog, study, teacher home, and course editor use the shared two-column shell classes. Sidebars hold category filters, the aula tree, teaching courses, or editor items respectively.
 - In study, `/courses/:id` is the **Visão geral** overview (**Sobre o curso** / **Sobre o autor**). Lesson routes hide those panels. Completing an aula advances to the next lesson route; the final aula remains selected.
 - Course edit, students, progress, and category administration render page titles/actions inside main and do not add nested `mat-toolbar` chrome.

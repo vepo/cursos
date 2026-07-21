@@ -94,7 +94,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 |------|---------|--------------|
 | **Visual shell** | Dark application frame (GitHub-dark developer palette): near-black **header**, contextual **sidebar**, and **main** content region. | Dark-only; CSS variables and shared `.app-shell-*` classes |
 | **Header** | Persistent top bar that stays visible while content scrolls. | Authenticated: brand + **menu icon**; unauthenticated: brand + **Entrar** |
-| **Footer** | Persistent bottom bar with product copyright and OpenAPI link. | Fixed with header; does not scroll away |
+| **Footer** | Persistent bottom bar with product copyright, author credit (Victor Osório → GitHub), optional branding credit, and OpenAPI when enabled. | Fixed with header; does not scroll away |
 | **Sidebar** | Left near-black region whose contents depend on the current screen. | Catalog categories, study aula tree, teaching-course list, or editor item list |
 | **Main** | Primary dark content region beside or below the contextual sidebar; the scrollable shell region. | Nested teacher/admin pages use this region without a second toolbar |
 | **Menu icon** | Top-right authenticated control that opens or closes the navigation drawer. | Closed by default; `aria-expanded` reflects state; `--color-on-chrome` on ink header for contrast |

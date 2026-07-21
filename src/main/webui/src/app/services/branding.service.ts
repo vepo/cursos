@@ -43,7 +43,7 @@ const DEFAULT_BRANDING: Branding = {
   supportUrl: null,
   docsUrl: null,
   legalUrl: null,
-  credit: 'Powered by Learn',
+  credit: null,
   showDeveloperLinks: false
 };
 

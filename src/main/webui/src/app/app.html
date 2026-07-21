@@ -107,9 +107,13 @@
           }
         </nav>
       </div>
-      @if (branding().credit) {
-        <span class="footer-credit" data-testid="footer-credit">{{ branding().credit }}</span>
-      }
+      <div class="footer-credit" data-testid="footer-credit">
+        <span>Desenvolvido por</span>
+        <a href="https://github.com/vepo" target="_blank" rel="noopener noreferrer">Victor Osório</a>
+        @if (branding().credit) {
+          <span class="footer-credit-extra">{{ branding().credit }}</span>
+        }
+      </div>
     </div>
   </footer>
 </div>

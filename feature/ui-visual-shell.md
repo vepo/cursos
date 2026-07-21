@@ -1,6 +1,6 @@
 # UI visual shell
 
-**Feature version:** 4  
+**Feature version:** 5  
 **Status:** done  
 **Requested:** 2026-07-18
 
@@ -409,3 +409,57 @@ Angular unit tests for shell and page layout regions; keep `data-testid` contrac
 **Development approval:** approved 2026-07-21 — tasks: T41, T42 (plan implementation)
 
 **Implementation notes:** `.editor-nav-item` uses `--color-on-chrome`; selected uses accent left border + translucent accent bg (same pattern as teacher/catalog). `.app-shell-sidebar .aula-type-icon` muted on-chrome mix. Spec `shouldPaintUnselectedEditorNavItemWithOnChromeOnInkSidebar`. Gallery updated. `npm test` course-edit: 13 SUCCESS.
+
+### 2026-07-21 — Footer author credit (Victor Osório)
+
+**Status:** done
+
+**Description:** Sticky footer credits **Victor Osório** with a link to the GitHub profile `https://github.com/vepo` (Backoffice-style “Desenvolvido por”). Optional white-label `learn.brand.credit` remains as a secondary line when set; default credit is empty. Aligns with Backoffice shell credit.
+
+**Impact on other features:** Shell footer (`app.html` / `app.spec.ts`); branding defaults (`application.properties`, `branding.service.ts`); docs (gallery, feature-catalog, domain-spec, configuration). No API/schema shape change.
+
+#### Feature questions (FQ)
+
+| ID | Question | Status | Answer |
+|----|----------|--------|--------|
+| **FQ10** | Author name and profile URL? | answered | Victor Osório → `https://github.com/vepo`. |
+
+#### Architecture questions (AQ)
+
+| ID | Question | Status | Answer |
+|----|----------|--------|--------|
+| **AQ8** | Credit via branding string vs hardcoded author line? | answered | Hardcoded author credit in template (like Backoffice); keep optional `branding().credit` as secondary when non-empty; default `learn.brand.credit` empty. |
+
+#### Architecture
+
+| Area | Design |
+|------|--------|
+| Packages | `app.html`, `app.scss` (existing `.footer-credit`), `app.spec.ts`, `branding.service.ts`; `application.properties` |
+| Layers | N/A (Angular shell) |
+| API / schema | None (no new branding fields) |
+| Tests | Footer asserts author name + GitHub href |
+
+#### Feature checklist
+
+| ID | Criterion | Source | Done |
+|----|-----------|--------|------|
+| FC24 | Footer shows “Desenvolvido por” + Victor Osório linking to github.com/vepo | FQ10, AQ8 | ☑ |
+| FC25 | Optional branding credit still shown when non-empty; default empty | AQ8 | ☑ |
+| FC26 | Spec + gallery / domain / catalog / configuration synced | Impact | ☑ |
+
+#### Tasks
+
+| ID | Task | Covers | Done |
+|----|------|--------|------|
+| T43 | Footer author credit markup + empty default branding credit | FC24, FC25 | ☑ |
+| T44 | Update `app.spec.ts` and docs (gallery, domain, catalog, configuration) | FC26 | ☑ |
+
+#### Test coverage
+
+| ID | Test | Covers | Done |
+|----|------|--------|------|
+| TC15 | Footer credit contains Victor Osório and `a[href="https://github.com/vepo"]` | T43, T44 | ☑ |
+
+**Development approval:** approved 2026-07-21 — tasks: T43, T44 (plan implementation)
+
+**Implementation notes:** Author credit hardcoded in `app.html` (Victor Osório → github.com/vepo). `learn.brand.credit` default empty; optional secondary `.footer-credit-extra`. Specs and docs updated. Backoffice author link pointed to the same GitHub profile (including minimal auth footer).
