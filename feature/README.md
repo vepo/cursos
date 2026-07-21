@@ -16,6 +16,7 @@ One markdown file per **high-level capability**: `feature/<feature-slug>.md` (ke
 | Learn productization | [learn-productization.md](learn-productization.md) | done |
 | Account settings | [account-settings.md](account-settings.md) | done |
 | Course authoring UX | [course-authoring-ux.md](course-authoring-ux.md) | done |
+| Enrollment admin UX | [enrollment-admin-ux.md](enrollment-admin-ux.md) | planned (v2 enroll new user; v1 done) |
 | Git course sync | [git-course-sync.md](git-course-sync.md) | architecture-ready (post-MVP) |
 
 ## Resolving `<feature-slug>`

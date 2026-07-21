@@ -91,16 +91,16 @@
   <footer class="main-footer" data-testid="visual-shell-footer">
     <div class="shell-inner footer-inner">
       <div class="footer-primary">
-        <span data-testid="footer-copyright">© {{ copyrightYear }} {{ branding().name }}</span>
-        <nav class="footer-links" aria-label="Rodapé">
+        <span class="footer-copyright" data-testid="footer-copyright">© {{ copyrightYear }} {{ branding().name }}</span>
+        <nav class="footer-links" aria-label="Ajuda e informações">
           @if (branding().supportUrl) {
             <a [href]="branding().supportUrl!" target="_blank" rel="noopener noreferrer">Suporte</a>
           }
           @if (branding().docsUrl) {
-            <a [href]="branding().docsUrl!" target="_blank" rel="noopener noreferrer">Docs</a>
+            <a [href]="branding().docsUrl!" target="_blank" rel="noopener noreferrer">Documentação</a>
           }
           @if (branding().legalUrl) {
-            <a [href]="branding().legalUrl!" target="_blank" rel="noopener noreferrer">Legal</a>
+            <a [href]="branding().legalUrl!" target="_blank" rel="noopener noreferrer">Jurídico</a>
           }
           @if (branding().showDeveloperLinks) {
             <a href="/openapi" target="_blank" rel="noopener noreferrer" data-testid="footer-openapi">OpenAPI</a>

@@ -36,6 +36,7 @@ Ordered ideas for Cursos that are **not yet** in active development (or are queu
 | — | done | **Course markdown (Marked)** | Shared Marked + DOMPurify for study + teacher live preview | `course-markdown` | [course-markdown.md](../feature/course-markdown.md) |
 | — | done | **Course Mermaid diagrams** | ```mermaid fences (e.g. erDiagram) in study + preview | `course-markdown` | [course-markdown.md](../feature/course-markdown.md) |
 | — | promoted | **Composite aula** | Ordered blocks (markdown/video/link/image) inside one aula | `composite-aula` | [composite-aula.md](../feature/composite-aula.md) |
+| — | promoted | **Enroll new user** | Teacher creates Passport account + enrolls from students page | `enrollment-admin-ux` | [enrollment-admin-ux.md](../feature/enrollment-admin-ux.md) |
 | 1 | idea | **Course search and filters** | Full-text search, filter by category on catalog | `course-search` | — |
 | 2 | idea | **Unpublish / archive course** | Hide without deleting enrollments | `course-lifecycle` | — |
 | 3 | idea | **Co-teachers** | Multiple teachers per course | `co-teachers` | — |

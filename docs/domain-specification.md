@@ -94,7 +94,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 |------|---------|--------------|
 | **Visual shell** | Dark application frame (GitHub-dark developer palette): near-black **header**, contextual **sidebar**, and **main** content region. | Dark-only; CSS variables and shared `.app-shell-*` classes |
 | **Header** | Persistent top bar that stays visible while content scrolls. | Authenticated: brand + **menu icon**; unauthenticated: brand + **Entrar** |
-| **Footer** | Persistent bottom bar with product copyright, author credit (Victor Osório → GitHub), optional branding credit, and OpenAPI when enabled. | Fixed with header; does not scroll away |
+| **Footer** | Persistent bottom bar with product copyright, author credit (Victor Osório → GitHub), optional branding credit (Suporte / Documentação / Jurídico), and OpenAPI when enabled. Horizontal inset matches the header. | Fixed with header; does not scroll away |
 | **Sidebar** | Left near-black region whose contents depend on the current screen. | Catalog categories, study aula tree, teaching-course list, or editor item list |
 | **Main** | Primary dark content region beside or below the contextual sidebar; the scrollable shell region. | Nested teacher/admin pages use this region without a second toolbar |
 | **Menu icon** | Top-right authenticated control that opens or closes the navigation drawer. | Closed by default; `aria-expanded` reflects state; `--color-on-chrome` on ink header for contrast |
@@ -151,11 +151,13 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Request enrollment** | Student self-service action creating **REQUESTED** enrollment. | UI **Solicitar matrícula** |
 | **Approve enrollment** | Teacher accepts **REQUESTED** → **ENROLLED**. | UI **Aprovar** |
 | **Reject enrollment** | Teacher declines **REQUESTED** → **REJECTED**. | UI **Recusar** |
-| **Direct enrollment** | Teacher enrolls a student by email without request step. | UI **Matricular aluno**; creates **ENROLLED** immediately |
+| **Direct enrollment** | Teacher enrolls an **existing** Passport user without request step (directory search). | UI **Matricular aluno**; creates **ENROLLED** immediately |
+| **Enroll new user** | Teacher provisions a **new** Passport account and enrolls that student on the course in one flow. | UI **Enroll new user** / **Matricular novo usuário** (label TBD); see [enrollment-admin-ux.md](../feature/enrollment-admin-ux.md) v2 |
+| **Account activation** | Student completes access to a newly provisioned Passport account (email link / temporary password — semantics TBD). | Owned by **Passport**; Learn triggers provision during enroll-new-user |
 | **REQUESTED** | Enrollment awaiting teacher decision. | `EnrollmentStatus.REQUESTED`; UI badge **Solicitado** |
 | **ENROLLED** | Active student — may view items and track progress. | `EnrollmentStatus.ENROLLED`; UI badge **Matriculado** |
 | **REJECTED** | Declined enrollment request. | `EnrollmentStatus.REJECTED`; UI badge **Recusado** |
-| **Enrollment admin** | Teacher screen grouping enrollments by status with pending counts. | Route `/teacher/courses/:id/students`; sections **Solicitações pendentes** / **Alunos matriculados** / **Recusados** |
+| **Enrollment admin** | Teacher screen grouping enrollments by status with pending counts. | Route `/teacher/courses/:id/students`; sections **Solicitações pendentes** / **Alunos matriculados** / **Recusados** + enroll forms |
 
 ### Progress
 

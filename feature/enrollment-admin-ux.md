@@ -1,21 +1,23 @@
 # Enrollment admin UX
 
-**Feature version:** 1
-**Status:** done
-**Requested:** 2026-07-19
+**Feature version:** 2
+**Status:** planned
+**Requested:** 2026-07-19 (v1 polish); 2026-07-21 (enroll new user)
 
 ## Summary
 
-Improve the teacher enrollment administration screen at `/teacher/courses/:courseId/students`. Today it renders one flat `<ul>` mixing pending requests and enrolled students, shows raw English enum values (`REQUESTED`, `ENROLLED`), has no counts, no empty states, no action feedback, no confirmation before rejecting, and no navigation back to the teacher area.
+Teacher enrollment administration at `/teacher/courses/:courseId/students`.
 
-Angular-only change: all required APIs exist (list enrollments, approve, reject, direct enroll, Passport directory search, course detail).
+**v1 (done):** polish — grouped sections, PT-BR badges, feedback, reject confirmation, Passport directory direct enroll.
+
+**v2 (planned):** allow teachers to **Enroll new user** when the student has no Passport account yet — create the Passport user, send account activation email, and enroll them on the course in one teacher flow. Existing **Matricular aluno** (directory search) remains for users who already exist in Passport.
 
 ## Wireframe
 
 | Field | Value |
 |-------|-------|
 | **Source** | ASCII below |
-| **Last updated** | 2026-07-19 |
+| **Last updated** | 2026-07-21 |
 
 ### Screen: `/teacher/courses/:courseId/students`
 
@@ -44,32 +46,45 @@ Angular-only change: all required APIs exist (list enrollments, approve, reject,
 │                                                                  │
 │ Matricular aluno                                                 │
 │ [ Buscar no Passport __________ ] [Buscar]                       │
-│ │ Ana Mentora · mentor@…            [Matricular]               │ │
-│ │ Alice Santos · alice@…            [badge Já matriculado]     │ │
+│ │ Ana Mentora · mentor@…            [Matricular]               │
+│ │ Alice Santos · alice@…            [badge Já matriculado]     │
 │ (empty após busca: "Nenhum usuário encontrado")                  │
+│                                                                  │
+│ Enroll new user / Matricular novo usuário                        │
+│ Nome: [____________________]                                     │
+│ E-mail: [____________________]                                   │
+│ (username: TBD per FQ5)                                          │
+│ [Enroll new user]                                                │
+│ (success: "Conta criada e aluno matriculado. E-mail enviado.")   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 - **Recusar** opens `ConfirmationDialogComponent` before calling the API.
 - Directory results already enrolled/requested show a badge instead of the **Matricular** button.
 - Action buttons disable while the request is in flight.
+- **Enroll new user** is a separate form from Passport search (FQ3). Field set and activation semantics depend on open **FQ** answers.
 
 ## Impact
 
 | Area | Effect |
 |------|--------|
-| Bounded contexts | `enrollment` (UI only) — no backend change |
-| Packages | none (Angular `components/course-students/` only) |
-| API | none — uses existing `GET /courses/{id}`, `GET /courses/{id}/enrollments`, approve/reject/direct, `GET /directory/users` |
-| UI | `course-students.component.{ts,html,scss,spec.ts}`; gallery status-badge variants |
-| Schema | none |
-| Seed | none — current `dev-import.sql` already provides REQUESTED/ENROLLED/REJECTED rows |
-| Tests | Angular specs for grouping, labels, feedback, confirm dialog, direct enroll |
-| Docs | `docs/ui-elements-gallery.md` (badge variants), `docs/feature-catalog.md` (steps) |
+| Bounded contexts | `enrollment`, `infra` (Passport client), possibly **Passport** repo (peer create / activation) |
+| Packages (Cursos) | `enrollment.*` (new enroll-new-user endpoint/service), `infra/passport` (create-user client), `mailer` if Learn also emails; Angular `course-students` |
+| Packages (Passport) | TBD — today `POST /users` is `passport.admin` only; no peer invite/activate API (see **AQ5–AQ7**) |
+| API (Cursos) | New teacher-only operation to provision + enroll (path TBD in architecture); keep existing directory direct enroll |
+| UI | Students page: form **Enroll new user** beside **Matricular aluno** |
+| Schema | None expected in Learn (enrollment denormalizes student fields); Passport may need invite/activation if FQ2 chooses real activate-before-login |
+| Seed | Optional persona/scenario for invited student; Passport may need a zero-role profile if create still requires `profileIds` |
+| Tests | Endpoint + Angular specs; Passport tests if new invite/create peer API |
+| Docs | Domain spec (enroll new user, activation), feature catalog, ARCHITECTURE (both repos), Passport domain if activation changes |
 
 ### Risks
 
-- None significant — UI refactor over stable APIs. Reject confirmation adds one dialog dependency already used elsewhere.
+- Teachers typically lack `passport.admin` — cannot call existing `POST /users` with their JWT.
+- Passport create requires `@NotEmpty profileIds`, while seed students have **no** profiles — peer create needs a product decision.
+- Passport today emails a **temporary password** (account already enabled); there is **no** activation-token flow. “Activate account” as stated may require Passport changes.
+- Dual email risk: Passport welcome/activation + Learn enrollment invitation — clarify which messages the student receives (FQ6).
+- Email collision: teacher enters an address that already exists in Passport (FQ4).
 
 ### Feature questions (FQ*n*)
 
@@ -79,6 +94,12 @@ Angular-only change: all required APIs exist (list enrollments, approve, reject,
 | FQ2 | Show course title in the page header? | answered | Yes — load via existing `GET /courses/{id}` |
 | FQ3 | Confirm before **Recusar**? | answered | Yes — `ConfirmationDialogComponent` (destructive action, Nielsen error prevention) |
 | FQ4 | Directory results already enrolled/requested: hide or badge? | answered | Badge **Já matriculado** / **Solicitado**, button hidden (recognition over recall) |
+| FQ5 | Form fields for **Enroll new user**? | open | Options: (A) name + email only (username auto-derived); (B) name + email + username; (C) email only |
+| FQ6 | What does “activate the account” mean? | open | Options: (A) **Reuse Passport create** — welcome email with temporary password, account login-ready immediately; (B) **New Passport activation** — disabled until student sets password via email link; (C) create user + trigger password-reset email as the “activation” step |
+| FQ7 | Keep **Matricular aluno** (Passport search) and add **Enroll new user** as a second section? | open | Default proposal: yes — both on the students page |
+| FQ8 | If email already exists in Passport? | open | Options: (A) enroll existing user and skip create; (B) show error “já existe — use Matricular aluno”; (C) enroll existing after confirm |
+| FQ9 | UI label language? | open | Request used English “Enroll new user”; rest of screen is PT-BR (**Matricular aluno**). Prefer **Matricular novo usuário** / **Matricular novo aluno**? |
+| FQ10 | Which emails does the student receive? | open | Options: (A) Passport activation/welcome only; (B) Passport + Learn enrollment invitation; (C) single combined Learn email (Passport still must notify credentials/activation somehow) |
 
 ### Architecture questions (AQ*n*)
 
@@ -86,8 +107,14 @@ Angular-only change: all required APIs exist (list enrollments, approve, reject,
 |---|----------|--------|--------|
 | AQ1 | Where do PT-BR status labels live? | answered | Component-level mapping function (same pattern as `home.component.ts` `enrollmentLabel()`); no i18n framework yet |
 | AQ2 | New status badge styles? | answered | Extend gallery `.status-badge` with `--requested`, `--enrolled`, `--rejected` variants in `styles.scss` |
+| AQ5 | How does Learn create Passport users without teacher `passport.admin`? | open | Options: (A) Passport **internal** `POST /internal/users` (service key); (B) new authenticated peer endpoint for trusted apps; (C) Learn service account with `passport.admin` calling `POST /users` |
+| AQ6 | Passport `profileIds` for a plain student? | open | Options: (A) make `profileIds` optional on create; (B) seed a zero-role **Learner** profile and assign it; (C) create with empty profiles via new invite API |
+| AQ7 | Single Learn endpoint that creates Passport user + enrolls, or UI calls two APIs? | open | Proposal: one Learn endpoint (teacher-only) orchestrates Passport provision then `EnrollmentService.directEnroll` |
+| AQ8 | Username uniqueness when auto-derived (if FQ5=A)? | open | Proposal: derive from email local-part, sanitize to Passport rules (4–15 chars), suffix on collision |
 
 ## Architecture
+
+### v1 (done)
 
 | Area | Design |
 |------|--------|
@@ -101,7 +128,41 @@ Angular-only change: all required APIs exist (list enrollments, approve, reject,
 | Styles | Flat UI per gallery; `.status-badge` variants; keep `app-shell-main nested-page` chrome (specs T26 stay green) |
 | Tests | Extend `course-students.component.spec.ts`; keep existing shell chrome specs passing |
 
+### v2 (draft — blocked on FQ5–FQ10 / AQ5–AQ8)
+
+| Area | Design |
+|------|--------|
+| Bounded contexts | Enrollment owns orchestration; Passport remains external identity |
+| Happy path | Teacher submits form → Learn creates/ensures Passport user → Learn creates **ENROLLED** → student gets activation/welcome email (per FQ6/FQ10) |
+| Layer map (proposed) | `EnrollNewUserEndpoint` → `EnrollmentService.enrollNewUser` → `PassportRestClient` (create/invite) + enrollment persist + optional `MailerService` |
+| Auth | Course teacher only (`requireTaughtBy`), same as direct enroll |
+| Passport change | Required unless Learn already has a service identity with `passport.admin` and FQ6=A is accepted |
+| Frontend | New form section on `course-students`; OpenAPI codegen after endpoint lands |
+| Tests | `@QuarkusTest` for provision+enroll + conflict cases; Angular form validation/success/error; Passport tests if new API |
+
 ## Changelog
+
+### 2026-07-21 — Enroll new user (Passport provision)
+
+**Status:** `planned`
+
+**Impact on other features:** Extends enrollment admin students page; requires Passport capability for peer/user create or activation (cross-repo). Does not change student self-request flow. Account-settings / login remain Passport-owned.
+
+**Feature checklist:**
+
+- [ ] **FC1** Students page offers **Enroll new user** form (FQ7, FQ9) separate from Passport search
+- [ ] **FC2** Teacher can enroll a student who has no Passport account; Passport user is created as part of the flow
+- [ ] **FC3** Student receives email to activate / set access per FQ6 and FQ10
+- [ ] **FC4** Existing Passport users still enrollable via **Matricular aluno** (directory)
+- [ ] **FC5** Email-already-exists behaviour matches FQ8
+- [ ] **FC6** Enrollment row is **ENROLLED** with denormalized student identity fields
+- [ ] **FC7** Only the course teacher can enroll new users
+- [ ] **FC8** Domain spec, feature catalog, ARCHITECTURE (Learn + Passport if changed) updated
+- [ ] **FC9** Wireframe regions match the students page after implementation
+
+**Tasks:** _(phase 3 — after FQ/AQ resolved)_
+
+**Test coverage:** _(phase 3 — after FQ/AQ resolved)_
 
 ### 2026-07-19 — Enrollment admin screen polish
 

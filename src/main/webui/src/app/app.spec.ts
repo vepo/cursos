@@ -640,6 +640,13 @@ describe('Visual shell header (T22)', () => {
       'a[href="/openapi"], [data-testid="footer-openapi"]'
     ) as HTMLAnchorElement | null;
     expect(openApi).withContext('OpenAPI when showDeveloperLinks').not.toBeNull();
+
+    const footerStyle = getComputedStyle(footer);
+    expect(footerStyle.paddingLeft).withContext('footer matches header horizontal inset')
+      .toBe('24px');
+    expect(footerStyle.paddingRight).toBe('24px');
+    expect(footer.querySelector('nav.footer-links')?.getAttribute('aria-label'))
+      .toBe('Ajuda e informações');
   });
 
   it('shouldScrollOnlyPageContentInsideFixedShell', async () => {

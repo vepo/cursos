@@ -11,7 +11,7 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | App shell sidebar | `.app-shell-sidebar` | Left chrome column |
 | App shell main | `.app-shell-main` | Primary content column |
 | Header | `.main-header`, `data-testid="visual-shell-header"` | Sticky top; brand + menu (auth) or Entrar |
-| Footer | `.main-footer`, `data-testid="visual-shell-footer"` | Sticky bottom; copyright; **Desenvolvido por** Victor Osório → `https://github.com/vepo`; optional branding credit; OpenAPI when developer links enabled |
+| Footer | `.main-footer`, `data-testid="visual-shell-footer"` | Sticky bottom; horizontal padding matches header (`1.5rem` / `1rem` mobile); copyright muted; hairline separator before utility links; **Suporte** / **Documentação** / **Jurídico**; **Desenvolvido por** Victor Osório → `https://github.com/vepo`; optional branding credit; OpenAPI when developer links enabled; on-chrome focus ring |
 | Navigation drawer | `.nav-menu-drawer` | Right-anchored; groups Aprender → Ensinar → Admin (if allowed) → Conta; Conta = Minha conta + Sair (danger, last interactive) |
 | Menu toggle | `data-testid="nav-menu-toggle"` | Last header control when authenticated; `--color-on-chrome` on ink header |
 | Logout | `.nav-menu-drawer__logout`, `data-testid="menu-logout"` | **Sair**; danger color |

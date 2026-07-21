@@ -100,8 +100,8 @@ Exposed publicly as `GET /api/branding`. One deployment = one brand.
 | `learn.brand.border` | `LEARN_BRAND_BORDER` | `#E2E8F0` | Borders |
 | `learn.brand.danger` | `LEARN_BRAND_DANGER` | `#DC2626` | Danger / errors |
 | `learn.brand.support-url` | `LEARN_BRAND_SUPPORT_URL` | (empty) | Footer Support link |
-| `learn.brand.docs-url` | `LEARN_BRAND_DOCS_URL` | (empty) | Footer Docs link |
-| `learn.brand.legal-url` | `LEARN_BRAND_LEGAL_URL` | (empty) | Footer Legal link |
+| `learn.brand.docs-url` | `LEARN_BRAND_DOCS_URL` | (empty) | Footer Documentação link |
+| `learn.brand.legal-url` | `LEARN_BRAND_LEGAL_URL` | (empty) | Footer Jurídico link |
 | `learn.brand.credit` | `LEARN_BRAND_CREDIT` | (empty) | Optional secondary footer credit line (author credit is always shown) |
 | `learn.brand.show-developer-links` | `LEARN_BRAND_SHOW_DEVELOPER_LINKS` | `false` (`true` in `%dev`) | Show OpenAPI in footer |
 
