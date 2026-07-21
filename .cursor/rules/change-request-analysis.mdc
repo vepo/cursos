@@ -63,7 +63,7 @@ Kebab-case slug, stable for the lifetime of the capability. Re-run step 0 if the
 - Bounded contexts and packages ([cursos-bounded-contexts.mdc](cursos-bounded-contexts.mdc))
 - **Wireframe** — `## Wireframe` section with layouts for every UI route, dialog, shell widget, or email template; revise on scope change
 - API / OpenAPI / Angular surfaces (high level — detailed design in phase 2 **Architecture**)
-- Schema (`V1.0.0__Database_Creation.sql`), seed data, migrations (high level)
+- Schema (Flyway migrations under `db/migration/`), seed data, migrations (high level)
 - Tests and docs to update
 - Risks (optional bullets) and **Feature questions (FQ*n***)** table with status `open` | `answered` | `not valid` and **Answer** column
 

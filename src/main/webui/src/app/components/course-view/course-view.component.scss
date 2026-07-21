@@ -230,7 +230,17 @@
 }
 
 .aula-content {
-  padding: 0;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.aula-blocks {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.aula-block {
+  min-width: 0;
 }
 
 .aula-header {
@@ -239,6 +249,7 @@
   align-items: center;
   gap: 1rem;
   margin-bottom: 1rem;
+  padding: 0;
 }
 
 .aula-header h2 {
@@ -317,6 +328,26 @@
 :host ::ng-deep .markdown a {
   color: var(--color-link);
   text-decoration: underline;
+}
+
+:host ::ng-deep .markdown pre.course-mermaid {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+:host ::ng-deep .markdown pre.course-mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+:host ::ng-deep .markdown pre.course-mermaid-error {
+  border: 1px solid color-mix(in srgb, var(--color-danger, #c44) 60%, transparent);
+}
+
+:host ::ng-deep .markdown .course-mermaid-error-msg {
+  margin: 0 0 0.5rem;
+  color: var(--color-danger, #f88);
+  font-size: 0.9rem;
 }
 
 .link-resource {

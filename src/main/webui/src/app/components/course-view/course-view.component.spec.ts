@@ -62,48 +62,51 @@ describe('CourseViewComponent study UI', () => {
   const courseId = 42;
 
   const studyTree: StudyItemResponse[] = [
-    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true },
-    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
+    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false, firstBlockType: 'MARKDOWN' }
   ];
 
   const notStartedTree: StudyItemResponse[] = [
-    { id: 1, title: 'Intro', sortOrder: 1, completed: false, accessible: true },
-    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: false },
-    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
+    { id: 1, title: 'Intro', sortOrder: 1, completed: false, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: false, firstBlockType: 'MARKDOWN' },
+    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false, firstBlockType: 'MARKDOWN' }
   ];
 
   const concludedTree: StudyItemResponse[] = [
-    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-    { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
-    { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true }
+    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true, firstBlockType: 'MARKDOWN' }
   ];
 
   const introContent: CourseItemResponse = {
     id: 1,
     courseId,
     title: 'Intro',
-    itemType: 'MARKDOWN',
     sortOrder: 1,
-    markdownBody: '# Boas-vindas\n\nTexto seguro.'
+    blocks: [
+      { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Boas-vindas\n\nTexto seguro.' }
+    ]
   };
 
   const setupContent: CourseItemResponse = {
     id: 2,
     courseId,
     title: 'Setup',
-    itemType: 'MARKDOWN',
     sortOrder: 2,
-    markdownBody: '## Ambiente\n\nInstale o JDK.'
+    blocks: [
+      { id: 20, courseItemId: 2, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '## Ambiente\n\nInstale o JDK.' }
+    ]
   };
 
   const dangerousContent: CourseItemResponse = {
     id: 2,
     courseId,
     title: 'Setup',
-    itemType: 'MARKDOWN',
     sortOrder: 2,
-    markdownBody: 'Olá <script>window.__xss = true</script><img src=x onerror="window.__xss=true">'
+    blocks: [
+      { id: 20, courseItemId: 2, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: 'Olá <script>window.__xss = true</script><img src=x onerror="window.__xss=true">' }
+    ]
   };
 
   let fixture: ComponentFixture<CourseViewComponent>;
@@ -477,9 +480,9 @@ describe('CourseViewComponent study UI', () => {
     configure({ courseId: String(courseId), itemId: '2' });
 
     const afterCompleteTree = studyResponse([
-      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
-      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true }
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true, firstBlockType: 'MARKDOWN' }
     ]);
     studyApi.getCourseStudy.and.returnValue(of(afterCompleteTree) as never);
 
@@ -516,18 +519,19 @@ describe('CourseViewComponent study UI', () => {
     id: 3,
     courseId,
     title: 'DI',
-    itemType: 'MARKDOWN',
     sortOrder: 3,
-    markdownBody: '## Injeção de dependências'
+    blocks: [
+      { id: 30, courseItemId: 3, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '## Injeção de dependências' }
+    ]
   };
 
   it('shouldAdvanceToNextAulaAfterSuccessfulCompletion', fakeAsync(() => {
     configure({ courseId: String(courseId), itemId: '2' });
 
     const afterCompleteTree = studyResponse([
-      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
-      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true }
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true, firstBlockType: 'MARKDOWN' }
     ]);
     studyApi.getCourseStudy.and.returnValue(of(afterCompleteTree) as never);
     studyApi.getStudyItem.and.callFake((_cId: number, itemId: number) => {
@@ -575,9 +579,9 @@ describe('CourseViewComponent study UI', () => {
     });
 
     const afterPenultimateComplete = studyResponse([
-      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
-      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true }
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true, firstBlockType: 'MARKDOWN' }
     ]);
     studyApi.getCourseStudy.and.returnValue(of(afterPenultimateComplete) as never);
 
@@ -601,9 +605,9 @@ describe('CourseViewComponent study UI', () => {
     expect(fixture.componentInstance.selectedAulaId).toBe(3);
 
     const afterFinalComplete = studyResponse([
-      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
-      { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true }
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true, firstBlockType: 'MARKDOWN' }
     ]);
     studyApi.getCourseStudy.and.returnValue(of(afterFinalComplete) as never);
 
@@ -644,9 +648,9 @@ describe('CourseViewComponent study UI', () => {
 
   it('shouldRollbackCompletedAulaAfterConfirmation', fakeAsync(() => {
     const completedTree = studyResponse([
-      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
-      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true }
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: true, firstBlockType: 'MARKDOWN' }
     ]);
     TestBed.resetTestingModule();
     paramMap$ = new BehaviorSubject(convertToParamMap({ courseId: String(courseId), itemId: '2' }));
@@ -711,9 +715,9 @@ describe('CourseViewComponent study UI', () => {
     }
 
     studyApi.getCourseStudy.and.returnValue(of(studyResponse([
-      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-      { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true },
-      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false, firstBlockType: 'MARKDOWN' }
     ])) as never);
 
     rollbackButton.nativeElement.click();
@@ -729,9 +733,9 @@ describe('CourseViewComponent study UI', () => {
 
   it('shouldDownloadCertificateFromFinishScreen', fakeAsync(() => {
     const concludedTree = studyResponse([
-      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true },
-      { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true }
+      { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 2, title: 'Setup', sortOrder: 2, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+      { id: 3, title: 'DI', sortOrder: 3, completed: true, accessible: true, firstBlockType: 'MARKDOWN' }
     ]);
     TestBed.resetTestingModule();
     paramMap$ = new BehaviorSubject(convertToParamMap({ courseId: String(courseId), itemId: '3' }));
@@ -831,27 +835,29 @@ describe('CourseViewComponent aula discussion (T16)', () => {
   const courseId = 42;
 
   const studyTree: StudyItemResponse[] = [
-    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true },
-    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
+    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false, firstBlockType: 'MARKDOWN' }
   ];
 
   const introContent: CourseItemResponse = {
     id: 1,
     courseId,
     title: 'Intro',
-    itemType: 'MARKDOWN',
     sortOrder: 1,
-    markdownBody: '# Intro'
+    blocks: [
+      { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Intro' }
+    ]
   };
 
   const setupContent: CourseItemResponse = {
     id: 2,
     courseId,
     title: 'Setup',
-    itemType: 'MARKDOWN',
     sortOrder: 2,
-    markdownBody: '## Setup'
+    blocks: [
+      { id: 20, courseItemId: 2, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '## Setup' }
+    ]
   };
 
   const setupComments: CommentResponse[] = [
@@ -1304,27 +1310,29 @@ describe('CourseViewComponent visual shell (T24)', () => {
   const courseId = 42;
 
   const studyTree: StudyItemResponse[] = [
-    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true },
-    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false }
+    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 2, title: 'Setup', sortOrder: 2, completed: false, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 3, title: 'DI', sortOrder: 3, completed: false, accessible: false, firstBlockType: 'MARKDOWN' }
   ];
 
   const introContent: CourseItemResponse = {
     id: 1,
     courseId,
     title: 'Intro',
-    itemType: 'MARKDOWN',
     sortOrder: 1,
-    markdownBody: '# Boas-vindas'
+    blocks: [
+      { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Boas-vindas' }
+    ]
   };
 
   const setupContent: CourseItemResponse = {
     id: 2,
     courseId,
     title: 'Setup',
-    itemType: 'MARKDOWN',
     sortOrder: 2,
-    markdownBody: '## Ambiente'
+    blocks: [
+      { id: 20, courseItemId: 2, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '## Ambiente' }
+    ]
   };
 
   let fixture: ComponentFixture<CourseViewComponent>;
@@ -1596,7 +1604,7 @@ describe('CourseViewComponent visual shell (T24)', () => {
     expect(router.navigate).not.toHaveBeenCalledWith(['/courses', courseId, 'lessons', 3]);
   }));
 
-  it('shouldRenderStateIconForCompletedCurrentAccessibleAndLockedAulas', fakeAsync(() => {
+  it('shouldRenderFirstBlockTypeIconAndLockForLockedAulas', fakeAsync(() => {
     // Select completed aula so item 2 is accessible (not current) and item 3 stays locked.
     configure({ courseId: String(courseId), itemId: '1' });
 
@@ -1621,8 +1629,8 @@ describe('CourseViewComponent visual shell (T24)', () => {
       return;
     }
 
-    expect(iconFontName(completedIcon)).toBe('check_circle');
-    expect(iconFontName(accessibleIcon)).toBe('radio_button_unchecked');
+    expect(iconFontName(completedIcon)).toBe('article');
+    expect(iconFontName(accessibleIcon)).toBe('article');
     expect(iconFontName(lockedIcon)).toBe('lock');
     expect(completedIcon.getAttribute('aria-hidden')).toBe('true');
     expect(accessibleIcon.getAttribute('aria-hidden')).toBe('true');
@@ -1639,11 +1647,11 @@ describe('CourseViewComponent visual shell (T24)', () => {
     if (!currentIcon) {
       return;
     }
-    expect(iconFontName(currentIcon)).toBe('play_arrow');
+    expect(iconFontName(currentIcon)).toBe('article');
     expect(currentIcon.getAttribute('aria-hidden')).toBe('true');
   }));
 
-  it('shouldKeepLockedAulaMutedWithLockIconAndUnlockedAccentIcons', fakeAsync(() => {
+  it('shouldKeepLockedAulaMutedWithLockIconAndFirstBlockTypeIcons', fakeAsync(() => {
     // Lesson route so aula 2 is current (course root no longer auto-selects).
     configure({ courseId: String(courseId), itemId: '2' });
 
@@ -1659,15 +1667,15 @@ describe('CourseViewComponent visual shell (T24)', () => {
     expect(locked).not.toBeNull();
     expect(locked?.getAttribute('aria-disabled')).toBe('true');
 
-    expect(completedIcon).withContext('completed needs check_circle icon').not.toBeNull();
-    expect(currentIcon).withContext('current needs play_arrow icon').not.toBeNull();
+    expect(completedIcon).withContext('completed needs first-block type icon').not.toBeNull();
+    expect(currentIcon).withContext('current needs first-block type icon').not.toBeNull();
     expect(lockedIcon).withContext('locked needs lock icon').not.toBeNull();
     if (!completed || !current || !locked || !completedIcon || !currentIcon || !lockedIcon) {
       return;
     }
 
-    expect(iconFontName(completedIcon)).toBe('check_circle');
-    expect(iconFontName(currentIcon)).toBe('play_arrow');
+    expect(iconFontName(completedIcon)).toBe('article');
+    expect(iconFontName(currentIcon)).toBe('article');
     expect(iconFontName(lockedIcon)).toBe('lock');
     expect(completedIcon.getAttribute('aria-hidden')).toBe('true');
     expect(currentIcon.getAttribute('aria-hidden')).toBe('true');
@@ -1744,8 +1752,8 @@ describe('CourseViewComponent summary and media (T17)', () => {
   const courseId = 42;
 
   const studyTree: StudyItemResponse[] = [
-    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true },
-    { id: 2, title: 'Docs', sortOrder: 2, completed: false, accessible: true }
+    { id: 1, title: 'Intro', sortOrder: 1, completed: true, accessible: true, firstBlockType: 'MARKDOWN' },
+    { id: 2, title: 'Docs', sortOrder: 2, completed: false, accessible: true, firstBlockType: 'MARKDOWN' }
   ];
 
   let fixture: ComponentFixture<CourseViewComponent>;
@@ -1841,9 +1849,10 @@ describe('CourseViewComponent summary and media (T17)', () => {
       id: 1,
       courseId,
       title: 'Intro',
-      itemType: 'MARKDOWN',
       sortOrder: 1,
-      markdownBody: '# Boas-vindas'
+      blocks: [
+        { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Boas-vindas' }
+      ]
     }, { courseRoot: true });
 
     const summary = fixture.nativeElement.querySelector('[data-testid="course-summary"]');
@@ -1860,9 +1869,10 @@ describe('CourseViewComponent summary and media (T17)', () => {
       id: 1,
       courseId,
       title: 'Intro',
-      itemType: 'MARKDOWN',
       sortOrder: 1,
-      markdownBody: '# Boas-vindas'
+      blocks: [
+        { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Boas-vindas' }
+      ]
     });
 
     const aulaTitle = fixture.nativeElement.querySelector('.aula-header h2') as HTMLElement;
@@ -1880,10 +1890,10 @@ describe('CourseViewComponent summary and media (T17)', () => {
       id: 2,
       courseId,
       title: 'Docs',
-      itemType: 'LINK' as CourseItemResponse['itemType'],
       sortOrder: 2,
-      linkUrl: 'https://example.com/guide',
-      linkDescription: 'Guia oficial'
+      blocks: [
+        { id: 20, courseItemId: 2, blockType: 'LINK', sortOrder: 0, linkUrl: 'https://example.com/guide', linkDescription: 'Guia oficial' }
+      ]
     } as CourseItemResponse);
 
     const link = fixture.nativeElement.querySelector('[data-testid="open-link-resource"]') as HTMLAnchorElement;

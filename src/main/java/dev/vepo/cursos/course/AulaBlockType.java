@@ -1,5 +1,5 @@
 package dev.vepo.cursos.course;
 
-public enum CourseItemType {
+public enum AulaBlockType {
     MARKDOWN, IMAGE, VIDEO, LINK
 }

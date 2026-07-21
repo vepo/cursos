@@ -15,7 +15,7 @@ Read these before changing code or tests:
 | [.cursor/agents/](.cursor/agents/) | Project subagents (specialized behaviour) |
 | [.cursor/skills/cursos-agent/](.cursor/skills/cursos-agent/) | Skill: build and extend the Cursos platform |
 
-**Not in production yet**: This project is not in production yet. There is no need to keep legacy or update any production environment. Schema changes: amend `V1.0.0__Database_Creation.sql` only — see [cursos-flyway.mdc](.cursor/rules/cursos-flyway.mdc).
+**Production baseline:** Learn is deployed with Flyway `V1.0.0`. Schema changes must add a **new** versioned migration (`V1.0.1__…`, …) — do **not** rewrite shipped scripts. See [cursos-flyway.mdc](.cursor/rules/cursos-flyway.mdc).
 
 **Authentication:** Cursos trusts **Passport** JWT (RS256). Users log in via Passport; Cursos validates the Bearer token and reads `sub` / `groups` from JWT claims. Dev stack: Passport on **8080**, Cursos on **8083**.
 
@@ -75,7 +75,7 @@ Additional always-on rules: [development-process.mdc](.cursor/rules/development-
 | [cursos-test-failure-diagnosis.mdc](.cursor/rules/cursos-test-failure-diagnosis.mdc) | `src/test/**` | Failure classification and reports |
 | [documentation.mdc](.cursor/rules/documentation.mdc) | `docs/**`, `README.md` | User-facing docs maintenance |
 | [dev-import-sql-safety.mdc](.cursor/rules/dev-import-sql-safety.mdc) | `dev-import.sql`, migrations | Safe dev seed changes |
-| [cursos-flyway.mdc](.cursor/rules/cursos-flyway.mdc) | always on | Pre-production: amend `V1.0.0` only, no `V1.0.x` files |
+| [cursos-flyway.mdc](.cursor/rules/cursos-flyway.mdc) | always on | Production: add incremental `V1.0.x` migrations; never rewrite shipped |
 
 ## Project subagents (`.cursor/agents/`)
 

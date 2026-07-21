@@ -2,10 +2,10 @@
   @if (!isNew) {
     <aside class="app-shell-sidebar" data-testid="shell-sidebar">
       <div class="sidebar-heading">
-        <strong>Conteúdo</strong>
-        <button type="button" class="btn-quiet" data-testid="new-item" (click)="selectNewItem()">+ Novo item</button>
+        <strong>Aulas</strong>
+        <button type="button" class="btn-quiet" data-testid="new-item" (click)="selectNewItem()">+ Nova aula</button>
       </div>
-      <nav aria-label="Itens do curso">
+      <nav aria-label="Aulas do curso">
         <button
           type="button"
           class="editor-nav-item"
@@ -17,7 +17,7 @@
             <span class="dirty-dot" aria-label="não salvo"></span>
           }
         </button>
-        @for (item of items; track item.id; let first = $first; let last = $last) {
+        @for (item of items; track item.id) {
           <div class="editor-nav-row">
             <button
               type="button"
@@ -25,7 +25,10 @@
               [attr.data-testid]="'nav-item-' + item.id"
               [class.is-selected]="isSelected(item.id!)"
               (click)="selectItem(item)">
-              {{ item.title }}
+              <span class="editor-nav-item__label">
+                <mat-icon class="aula-type-icon" [fontIcon]="blockTypeIcon(firstBlockType(item))" aria-hidden="true"></mat-icon>
+                {{ item.title }}
+              </span>
               @if (isSelected(item.id!) && dirty) {
                 <span class="dirty-dot" aria-label="não salvo"></span>
               }
@@ -43,13 +46,13 @@
                 aria-label="Mover para baixo"
                 [disabled]="!canMoveDown(item)"
                 (click)="moveItem(item, 1)">↓</button>
-              <button type="button" class="btn-danger" aria-label="Excluir item" (click)="deleteItem(item)">×</button>
+              <button type="button" class="btn-danger" aria-label="Excluir aula" (click)="deleteItem(item)">×</button>
             </div>
           </div>
         }
         @if (isSelected('new-item')) {
           <button type="button" class="editor-nav-item is-selected" disabled>
-            Novo item
+            Nova aula
             @if (dirty) {
               <span class="dirty-dot" aria-label="não salvo"></span>
             }
@@ -159,37 +162,30 @@
           }
         }
       </section>
-    } @else {
+    } @else if (selection === 'new-item') {
       <section class="card editor-pane">
-        <h2>{{ selection === 'new-item' ? 'Novo item' : 'Editar item' }}</h2>
-        @if (selection === 'new-item') {
-          <mat-form-field appearance="outline" class="full">
-            <mat-label>Tipo do item</mat-label>
-            <mat-select
-              [(ngModel)]="itemType"
-              (ngModelChange)="markDirty()"
-              data-testid="item-type">
-              <mat-option value="MARKDOWN">Markdown</mat-option>
-              <mat-option value="LINK">Link</mat-option>
-              <mat-option value="VIDEO">Vídeo</mat-option>
-            </mat-select>
-          </mat-form-field>
-        }
+        <h2>Nova aula</h2>
         <mat-form-field appearance="outline" class="full">
-          <mat-label>Título do item</mat-label>
+          <mat-label>Tipo do primeiro bloco</mat-label>
+          <mat-select
+            [(ngModel)]="itemType"
+            (ngModelChange)="markDirty()"
+            data-testid="item-type">
+            <mat-option value="MARKDOWN">Markdown</mat-option>
+            <mat-option value="LINK">Link</mat-option>
+            <mat-option value="VIDEO">Vídeo</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Título da aula</mat-label>
           <input
             matInput
             [(ngModel)]="itemTitle"
             (ngModelChange)="markDirty()"
-            data-testid="item-title"
-            [readonly]="isExistingVideoItem()" />
+            data-testid="item-title" />
         </mat-form-field>
 
-        @if (isExistingVideoItem()) {
-          <p class="meta" data-testid="video-readonly-note">
-            Itens de vídeo existentes não podem ser alterados aqui. Apenas o título permanece visível.
-          </p>
-        } @else if (selection === 'new-item' && itemType === 'VIDEO') {
+        @if (itemType === 'VIDEO') {
           <div class="media-upload">
             <label class="media-upload__label">
               Arquivo de vídeo
@@ -201,7 +197,7 @@
               </p>
             }
           </div>
-        } @else if ((selection === 'new-item' && itemType === 'LINK') || isExistingLinkItem()) {
+        } @else if (itemType === 'LINK') {
           <mat-form-field appearance="outline" class="full">
             <mat-label>URL do link</mat-label>
             <input matInput [(ngModel)]="linkUrl" (ngModelChange)="markDirty()" data-testid="link-url" />
@@ -230,66 +226,176 @@
 
             <section class="markdown-preview" data-testid="markdown-preview" aria-label="Pré-visualização">
               <h3>Pré-visualização</h3>
-              <div class="markdown" [innerHTML]="previewMarkdownHtml()"></div>
+              <div class="markdown" appCourseMermaid [innerHTML]="previewMarkdownHtml()"></div>
             </section>
           </div>
+        }
+      </section>
+    } @else if (selectedAula(); as aula) {
+      <section class="card editor-pane" data-testid="aula-editor">
+        <h2>Editar aula</h2>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Título da aula</mat-label>
+          <input
+            matInput
+            [(ngModel)]="itemTitle"
+            (ngModelChange)="markDirty()"
+            data-testid="item-title" />
+        </mat-form-field>
 
-          <section class="image-gallery" data-testid="image-gallery">
-            <h3>Galeria de imagens</h3>
-            <p class="meta">Envie imagens e insira referências estáveis no Markdown.</p>
-            <div class="inline-actions">
-              <label class="btn-quiet file-label">
-                Enviar imagem
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  hidden
-                  data-testid="gallery-upload"
-                  (change)="onGalleryFileSelected($event)" />
-              </label>
-              @if (galleryUploadPending) {
-                <span class="meta">Enviando…</span>
-              }
-            </div>
-            @if (galleryError) {
-              <p class="error" role="alert">{{ galleryError }}</p>
-            }
-            <div class="gallery-grid">
-              @for (asset of gallery; track asset.id) {
+        <div class="blocks-heading">
+          <h3>Blocos</h3>
+          <button
+            mat-stroked-button
+            type="button"
+            data-testid="append-block"
+            [matMenuTriggerFor]="appendBlockMenu">
+            + Bloco
+          </button>
+          <mat-menu #appendBlockMenu="matMenu">
+            <button mat-menu-item type="button" data-testid="append-markdown" (click)="appendBlock('MARKDOWN')">Markdown</button>
+            <button mat-menu-item type="button" data-testid="append-video" (click)="appendBlock('VIDEO')">Vídeo</button>
+            <button mat-menu-item type="button" data-testid="append-link" (click)="appendBlock('LINK')">Link</button>
+            <button mat-menu-item type="button" data-testid="append-image" (click)="appendBlock('IMAGE')">Imagem</button>
+          </mat-menu>
+        </div>
+
+        <ul class="block-list" data-testid="block-list" aria-label="Blocos da aula">
+          @for (block of orderedBlocks(aula); track block.id) {
+            <li
+              class="block-row"
+              [class.is-selected]="selectedBlockId === block.id"
+              [attr.data-testid]="'block-row-' + block.id">
+              <button
+                type="button"
+                class="block-row__select"
+                (click)="selectBlock(block)">
+                <mat-icon class="aula-type-icon" [fontIcon]="blockTypeIcon(block.blockType)" aria-hidden="true"></mat-icon>
+                {{ blockTypeLabel(block.blockType) }}
+              </button>
+              <div class="block-row__tools">
                 <button
                   type="button"
-                  class="gallery-thumb"
-                  [class.is-selected]="selectedGalleryAssetId === asset.id"
-                  [attr.data-testid]="'gallery-asset-' + asset.id"
-                  (click)="selectGalleryAsset(asset)">
-                  <img [src]="asset.signedUrl" [alt]="asset.filename || 'Imagem'" />
-                  @if (asset.cover) {
-                    <span class="gallery-badge">Capa</span>
-                  }
-                  @if (isAssetReferenced(asset.id)) {
-                    <span class="gallery-badge gallery-badge--ref">Em uso</span>
-                  }
-                </button>
-              }
-            </div>
-            @if (selectedGalleryAsset(); as selected) {
-              <div class="gallery-insert">
-                <mat-form-field appearance="outline" class="full">
-                  <mat-label>Texto alternativo</mat-label>
-                  <input matInput [(ngModel)]="galleryAltText" data-testid="gallery-alt" />
-                </mat-form-field>
-                <div class="inline-actions">
-                  <button mat-stroked-button type="button" data-testid="insert-gallery-image" (click)="insertSelectedGalleryImage()">
-                    Inserir no Markdown
-                  </button>
-                  <button mat-stroked-button type="button" (click)="setCoverFromGallery(selected)">
-                    Usar como capa
-                  </button>
-                  <button mat-button class="btn-danger" type="button" data-testid="delete-gallery-image" (click)="deleteGalleryAsset(selected)">
-                    Excluir
-                  </button>
-                </div>
+                  class="btn-quiet"
+                  aria-label="Mover bloco para cima"
+                  [disabled]="!canMoveBlockUp(block)"
+                  (click)="moveBlock(block, -1)">↑</button>
+                <button
+                  type="button"
+                  class="btn-quiet"
+                  aria-label="Mover bloco para baixo"
+                  [disabled]="!canMoveBlockDown(block)"
+                  (click)="moveBlock(block, 1)">↓</button>
+                <button
+                  type="button"
+                  class="btn-danger"
+                  aria-label="Excluir bloco"
+                  [disabled]="!canDeleteBlock(block)"
+                  (click)="deleteBlock(block)">×</button>
               </div>
+            </li>
+          }
+        </ul>
+
+        @if (selectedBlock(); as block) {
+          <section class="block-editor" data-testid="block-editor">
+            <h3>Bloco: {{ blockTypeLabel(block.blockType) }}</h3>
+
+            @if (isMediaEditor()) {
+              <p class="meta" data-testid="media-readonly-note">
+                Blocos de mídia não podem ser alterados aqui. Use + Bloco para adicionar outro arquivo.
+              </p>
+            } @else if (isLinkEditor()) {
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>URL do link</mat-label>
+                <input matInput [(ngModel)]="linkUrl" (ngModelChange)="markDirty()" data-testid="link-url" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="full">
+                <mat-label>Descrição do link</mat-label>
+                <textarea
+                  matInput
+                  rows="4"
+                  [(ngModel)]="linkDescription"
+                  (ngModelChange)="markDirty()"
+                  data-testid="link-description"></textarea>
+              </mat-form-field>
+            } @else if (isMarkdownEditor()) {
+              <div class="markdown-editor-split" data-testid="markdown-editor-split">
+                <mat-form-field appearance="outline" class="full">
+                  <mat-label>Conteúdo Markdown</mat-label>
+                  <textarea
+                    #markdownBody
+                    matInput
+                    rows="16"
+                    [(ngModel)]="itemBody"
+                    (ngModelChange)="markDirty()"
+                    data-testid="item-body"></textarea>
+                </mat-form-field>
+
+                <section class="markdown-preview" data-testid="markdown-preview" aria-label="Pré-visualização">
+                  <h3>Pré-visualização</h3>
+                  <div class="markdown" appCourseMermaid [innerHTML]="previewMarkdownHtml()"></div>
+                </section>
+              </div>
+
+              <section class="image-gallery" data-testid="image-gallery">
+                <h3>Galeria de imagens</h3>
+                <p class="meta">Envie imagens e insira referências estáveis no Markdown.</p>
+                <div class="inline-actions">
+                  <label class="btn-quiet file-label">
+                    Enviar imagem
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      hidden
+                      data-testid="gallery-upload"
+                      (change)="onGalleryFileSelected($event)" />
+                  </label>
+                  @if (galleryUploadPending) {
+                    <span class="meta">Enviando…</span>
+                  }
+                </div>
+                @if (galleryError) {
+                  <p class="error" role="alert">{{ galleryError }}</p>
+                }
+                <div class="gallery-grid">
+                  @for (asset of gallery; track asset.id) {
+                    <button
+                      type="button"
+                      class="gallery-thumb"
+                      [class.is-selected]="selectedGalleryAssetId === asset.id"
+                      [attr.data-testid]="'gallery-asset-' + asset.id"
+                      (click)="selectGalleryAsset(asset)">
+                      <img [src]="asset.signedUrl" [alt]="asset.filename || 'Imagem'" />
+                      @if (asset.cover) {
+                        <span class="gallery-badge">Capa</span>
+                      }
+                      @if (isAssetReferenced(asset.id)) {
+                        <span class="gallery-badge gallery-badge--ref">Em uso</span>
+                      }
+                    </button>
+                  }
+                </div>
+                @if (selectedGalleryAsset(); as selected) {
+                  <div class="gallery-insert">
+                    <mat-form-field appearance="outline" class="full">
+                      <mat-label>Texto alternativo</mat-label>
+                      <input matInput [(ngModel)]="galleryAltText" data-testid="gallery-alt" />
+                    </mat-form-field>
+                    <div class="inline-actions">
+                      <button mat-stroked-button type="button" data-testid="insert-gallery-image" (click)="insertSelectedGalleryImage()">
+                        Inserir no Markdown
+                      </button>
+                      <button mat-stroked-button type="button" (click)="setCoverFromGallery(selected)">
+                        Usar como capa
+                      </button>
+                      <button mat-button class="btn-danger" type="button" data-testid="delete-gallery-image" (click)="deleteGalleryAsset(selected)">
+                        Excluir
+                      </button>
+                    </div>
+                  </div>
+                }
+              </section>
             }
           </section>
         }

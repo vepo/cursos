@@ -97,6 +97,22 @@ describe('course-markdown', () => {
     expect(html).toContain('<p>Fim.</p>');
   });
 
+  it('shouldEmitCourseMermaidPlaceholderForMermaidFences', () => {
+    const html = renderCourseMarkdown(
+      'Diagrama:\n\n```mermaid\nerDiagram\n    departments ||--o{ employees : "possui"\n```\n'
+    );
+    expect(html).toContain('class="course-mermaid"');
+    expect(html).toContain('erDiagram');
+    expect(html).toContain('departments');
+    expect(html).not.toMatch(/<pre><code[^>]*>[\s\S]*erDiagram/);
+  });
+
+  it('shouldKeepNonMermaidFencesAsNormalCodeBlocks', () => {
+    const html = renderCourseMarkdown('```ts\nconst x = 1;\n```');
+    expect(html).toContain('<pre><code');
+    expect(html).not.toContain('course-mermaid');
+  });
+
   it('shouldKeepCourseAssetImagesWorkingAlongsideInlineFormatting', () => {
     const html = renderCourseMarkdown(
       'Veja **o diagrama** ![Diagrama](course-asset:7) no texto.',

@@ -57,9 +57,9 @@ class LinkAndVideoAulaEndpointTest {
                .post("/api/courses/{id}/items/link", courseId)
                .then()
                .statusCode(HttpStatus.SC_OK)
-               .body("itemType", equalTo("LINK"))
-               .body("linkUrl", equalTo("https://example.com/guide"))
-               .body("linkDescription", equalTo("Official guide"));
+               .body("blocks[0].blockType", equalTo("LINK"))
+               .body("blocks[0].linkUrl", equalTo("https://example.com/guide"))
+               .body("blocks[0].linkDescription", equalTo("Official guide"));
     }
 
     @Test
@@ -83,8 +83,8 @@ class LinkAndVideoAulaEndpointTest {
                             .post("/api/courses/{id}/items/media", courseId)
                             .then()
                             .statusCode(HttpStatus.SC_OK)
-                            .body("itemType", equalTo("VIDEO"))
-                            .body("resourceId", notNullValue())
+                            .body("blocks[0].blockType", equalTo("VIDEO"))
+                            .body("blocks[0].resourceId", notNullValue())
                             .extract()
                             .path("id");
 
@@ -94,7 +94,7 @@ class LinkAndVideoAulaEndpointTest {
                                 .then()
                                 .statusCode(HttpStatus.SC_OK)
                                 .extract()
-                                .path("items[0].resourceId");
+                                .path("items[0].blocks[0].resourceId");
 
         given().header(teacherAuth)
                .when()

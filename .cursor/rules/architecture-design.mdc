@@ -64,7 +64,7 @@ Before exiting phase 2, confirm:
 1. **Layered architecture** — one HTTP operation per `*Endpoint`; business logic in `*Service`; persistence in `*Repository` ([cursos-layered-architecture.mdc](cursos-layered-architecture.mdc)).
 2. **Bounded contexts** — dependencies flow as allowed in [docs/domain-specification.md](../../docs/domain-specification.md); no cross-context repository access.
 3. **HTTP contract** — Request/Response records; no VO/DTO suffix ([cursos-http-contract.mdc](cursos-http-contract.mdc)).
-4. **Schema** — pre-production edits in `V1.0.0__Database_Creation.sql` only ([cursos-flyway.mdc](cursos-flyway.mdc)).
+4. **Schema** — add incremental Flyway versions after the deployed baseline ([cursos-flyway.mdc](cursos-flyway.mdc)).
 5. **Domain spec** — vocabulary and invariants from phase 1 still align; update domain spec if architecture reveals gaps.
 
 ### 4. Set status and stop

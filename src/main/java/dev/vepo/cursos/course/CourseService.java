@@ -17,6 +17,7 @@ public class CourseService {
     private final CourseRepository courseRepository;
     private final CategoryRepository categoryRepository;
     private final CourseItemRepository courseItemRepository;
+    private final AulaBlockRepository aulaBlockRepository;
     private final CourseResourceRepository courseResourceRepository;
     private final MediaProperties mediaProperties;
 
@@ -24,11 +25,13 @@ public class CourseService {
     public CourseService(CourseRepository courseRepository,
                          CategoryRepository categoryRepository,
                          CourseItemRepository courseItemRepository,
+                         AulaBlockRepository aulaBlockRepository,
                          CourseResourceRepository courseResourceRepository,
                          MediaProperties mediaProperties) {
         this.courseRepository = courseRepository;
         this.categoryRepository = categoryRepository;
         this.courseItemRepository = courseItemRepository;
+        this.aulaBlockRepository = aulaBlockRepository;
         this.courseResourceRepository = courseResourceRepository;
         this.mediaProperties = mediaProperties;
     }
@@ -63,6 +66,12 @@ public class CourseService {
     @Transactional
     public Course publish(long courseId, PassportUser teacher) {
         var course = requireTaughtBy(courseId, teacher);
+        var items = courseItemRepository.listByCourse(courseId);
+        for (var item : items) {
+            if (aulaBlockRepository.countByItem(item.getId()) < 1) {
+                throw CursosException.badRequest("Every aula must have at least one block before publish");
+            }
+        }
         course.publish();
         return course;
     }
@@ -78,14 +87,24 @@ public class CourseService {
         return courseItemRepository.listByCourse(courseId);
     }
 
+    public List<AulaBlock> listBlocks(long courseItemId) {
+        return aulaBlockRepository.listByItem(courseItemId);
+    }
+
+    public CourseItemResponse toItemResponse(CourseItem item) {
+        return CourseItemResponse.load(item, aulaBlockRepository.listByItem(item.getId()));
+    }
+
     @Transactional
     public CourseItem addMarkdownItem(long courseId, String title, String markdownBody, PassportUser teacher) {
         var course = requireTaughtBy(courseId, teacher);
         var order = courseItemRepository.countByCourse(courseId);
-        var item = new CourseItem(course, title.trim(), CourseItemType.MARKDOWN, order);
-        item.updateMarkdown(markdownBody != null ? markdownBody : "");
+        var item = courseItemRepository.save(new CourseItem(course, title.trim(), order));
+        var block = new AulaBlock(item, AulaBlockType.MARKDOWN, 0);
+        block.updateMarkdown(markdownBody != null ? markdownBody : "");
+        aulaBlockRepository.save(block);
         course.touch();
-        return courseItemRepository.save(item);
+        return item;
     }
 
     @Transactional
@@ -93,56 +112,51 @@ public class CourseService {
         var course = requireTaughtBy(courseId, teacher);
         var safeUrl = LinkUrlValidator.requireSafeAbsoluteUrl(linkUrl);
         var order = courseItemRepository.countByCourse(courseId);
-        var item = new CourseItem(course, title.trim(), CourseItemType.LINK, order);
-        item.updateLink(safeUrl, linkDescription);
+        var item = courseItemRepository.save(new CourseItem(course, title.trim(), order));
+        var block = new AulaBlock(item, AulaBlockType.LINK, 0);
+        block.updateLink(safeUrl, linkDescription);
+        aulaBlockRepository.save(block);
         course.touch();
-        return courseItemRepository.save(item);
+        return item;
     }
 
     @Transactional
-    public CourseItem addMediaItem(long courseId, String title, CourseItemType type, String contentType, String filename, byte[] content,
+    public CourseItem addMediaItem(long courseId, String title, AulaBlockType type, String contentType, String filename, byte[] content,
                                    PassportUser teacher) {
-        if (type != CourseItemType.IMAGE && type != CourseItemType.VIDEO) {
-            throw CursosException.badRequest("Media item type must be IMAGE or VIDEO");
+        if (type != AulaBlockType.IMAGE && type != AulaBlockType.VIDEO) {
+            throw CursosException.badRequest("Media block type must be IMAGE or VIDEO");
         }
         if (title == null || title.isBlank() || title.trim().length() > 200) {
             throw CursosException.badRequest("Media title is required and must be at most 200 characters");
         }
-        if (filename == null || filename.isBlank() || filename.length() > 255) {
-            throw CursosException.badRequest("Filename is required and must be at most 255 characters");
-        }
-        if (content == null || content.length == 0) {
-            throw CursosException.badRequest("Media content is required");
-        }
-        var normalizedType = contentType != null ? contentType.toLowerCase(Locale.ROOT) : "";
-        if (type == CourseItemType.IMAGE && !normalizedType.startsWith("image/")) {
-            throw CursosException.badRequest("IMAGE content type must be image/*");
-        }
-        if (type == CourseItemType.VIDEO && !normalizedType.startsWith("video/")) {
-            throw CursosException.badRequest("VIDEO content type must be video/*");
-        }
-        var maxBytes = type == CourseItemType.VIDEO ? mediaProperties.maxVideoBytes() : mediaProperties.maxImageBytes();
-        if (content.length > maxBytes) {
-            throw CursosException.badRequest("Media exceeds configured size limit");
-        }
+        validateMediaFile(type, contentType, filename, content);
         var course = requireTaughtBy(courseId, teacher);
         var resource = courseResourceRepository.save(new CourseResource(contentType, filename, content));
         var order = courseItemRepository.countByCourse(courseId);
-        var item = new CourseItem(course, title.trim(), type, order);
-        item.assignResource(resource);
+        var item = courseItemRepository.save(new CourseItem(course, title.trim(), order));
+        var block = new AulaBlock(item, type, 0);
+        block.assignResource(resource);
+        aulaBlockRepository.save(block);
         course.touch();
-        return courseItemRepository.save(item);
+        return item;
+    }
+
+    @Transactional
+    public CourseItem updateItemTitle(long courseId, long itemId, String title, PassportUser teacher) {
+        var item = requireItemOfCourse(courseId, itemId);
+        requireTaughtBy(courseId, teacher);
+        item.updateTitle(title.trim());
+        item.getCourse().touch();
+        return item;
     }
 
     @Transactional
     public CourseItem updateMarkdownItem(long itemId, String title, String markdownBody, PassportUser teacher) {
         var item = requireItem(itemId);
         requireTaughtBy(item.getCourse().getId(), teacher);
-        if (item.getItemType() != CourseItemType.MARKDOWN) {
-            throw CursosException.badRequest("Item is not markdown");
-        }
+        var block = requireFirstBlockOfType(itemId, AulaBlockType.MARKDOWN);
         item.updateTitle(title.trim());
-        item.updateMarkdown(markdownBody != null ? markdownBody : "");
+        block.updateMarkdown(markdownBody != null ? markdownBody : "");
         item.getCourse().touch();
         return item;
     }
@@ -151,13 +165,113 @@ public class CourseService {
     public CourseItem updateLinkItem(long itemId, String title, String linkUrl, String linkDescription, PassportUser teacher) {
         var item = requireItem(itemId);
         requireTaughtBy(item.getCourse().getId(), teacher);
-        if (item.getItemType() != CourseItemType.LINK) {
-            throw CursosException.badRequest("Item is not a link aula");
-        }
+        var block = requireFirstBlockOfType(itemId, AulaBlockType.LINK);
         item.updateTitle(title.trim());
-        item.updateLink(LinkUrlValidator.requireSafeAbsoluteUrl(linkUrl), linkDescription);
+        block.updateLink(LinkUrlValidator.requireSafeAbsoluteUrl(linkUrl), linkDescription);
         item.getCourse().touch();
         return item;
+    }
+
+    @Transactional
+    public AulaBlock appendMarkdownBlock(long courseId, long itemId, String markdownBody, PassportUser teacher) {
+        var item = requireItemOfCourse(courseId, itemId);
+        requireTaughtBy(courseId, teacher);
+        var block = new AulaBlock(item, AulaBlockType.MARKDOWN, (int) aulaBlockRepository.countByItem(itemId));
+        block.updateMarkdown(markdownBody != null ? markdownBody : "");
+        aulaBlockRepository.save(block);
+        item.getCourse().touch();
+        return block;
+    }
+
+    @Transactional
+    public AulaBlock appendLinkBlock(long courseId, long itemId, String linkUrl, String linkDescription, PassportUser teacher) {
+        var item = requireItemOfCourse(courseId, itemId);
+        requireTaughtBy(courseId, teacher);
+        var block = new AulaBlock(item, AulaBlockType.LINK, (int) aulaBlockRepository.countByItem(itemId));
+        block.updateLink(LinkUrlValidator.requireSafeAbsoluteUrl(linkUrl), linkDescription);
+        aulaBlockRepository.save(block);
+        item.getCourse().touch();
+        return block;
+    }
+
+    @Transactional
+    public AulaBlock appendMediaBlock(long courseId, long itemId, AulaBlockType type, String contentType, String filename, byte[] content,
+                                      PassportUser teacher) {
+        if (type != AulaBlockType.IMAGE && type != AulaBlockType.VIDEO) {
+            throw CursosException.badRequest("Media block type must be IMAGE or VIDEO");
+        }
+        validateMediaFile(type, contentType, filename, content);
+        var item = requireItemOfCourse(courseId, itemId);
+        requireTaughtBy(courseId, teacher);
+        var resource = courseResourceRepository.save(new CourseResource(contentType, filename, content));
+        var block = new AulaBlock(item, type, (int) aulaBlockRepository.countByItem(itemId));
+        block.assignResource(resource);
+        aulaBlockRepository.save(block);
+        item.getCourse().touch();
+        return block;
+    }
+
+    @Transactional
+    public AulaBlock updateMarkdownBlock(long courseId, long itemId, long blockId, String markdownBody, PassportUser teacher) {
+        requireTaughtBy(courseId, teacher);
+        var block = requireBlockOfItem(courseId, itemId, blockId);
+        if (block.getBlockType() != AulaBlockType.MARKDOWN) {
+            throw CursosException.badRequest("Block is not markdown");
+        }
+        block.updateMarkdown(markdownBody != null ? markdownBody : "");
+        block.getCourseItem().getCourse().touch();
+        return block;
+    }
+
+    @Transactional
+    public AulaBlock updateLinkBlock(long courseId, long itemId, long blockId, String linkUrl, String linkDescription, PassportUser teacher) {
+        requireTaughtBy(courseId, teacher);
+        var block = requireBlockOfItem(courseId, itemId, blockId);
+        if (block.getBlockType() != AulaBlockType.LINK) {
+            throw CursosException.badRequest("Block is not a link");
+        }
+        block.updateLink(LinkUrlValidator.requireSafeAbsoluteUrl(linkUrl), linkDescription);
+        block.getCourseItem().getCourse().touch();
+        return block;
+    }
+
+    @Transactional
+    public void deleteBlock(long courseId, long itemId, long blockId, PassportUser teacher) {
+        requireTaughtBy(courseId, teacher);
+        var block = requireBlockOfItem(courseId, itemId, blockId);
+        if (aulaBlockRepository.countByItem(itemId) <= 1) {
+            throw CursosException.badRequest("Cannot delete the last block of an aula");
+        }
+        aulaBlockRepository.delete(block);
+        block.getCourseItem().getCourse().touch();
+        reindexBlocks(itemId);
+    }
+
+    @Transactional
+    public List<AulaBlock> reorderBlocks(long courseId, long itemId, List<Long> blockIds, PassportUser teacher) {
+        requireTaughtBy(courseId, teacher);
+        requireItemOfCourse(courseId, itemId);
+        var blocks = aulaBlockRepository.listByItem(itemId);
+        if (blockIds == null || blockIds.isEmpty()) {
+            throw CursosException.badRequest("Reorder list must include every block exactly once");
+        }
+        var distinctIds = blockIds.stream().distinct().toList();
+        if (distinctIds.size() != blockIds.size()) {
+            throw CursosException.badRequest("Reorder list must not contain duplicate block ids");
+        }
+        var existingIds = blocks.stream().map(AulaBlock::getId).collect(java.util.stream.Collectors.toSet());
+        if (blockIds.size() != blocks.size() || !existingIds.containsAll(blockIds)) {
+            throw CursosException.badRequest("Reorder list must include every block exactly once");
+        }
+        for (int i = 0; i < blocks.size(); i++) {
+            blocks.get(i).reorder(-(i + 1));
+        }
+        aulaBlockRepository.flush();
+        var byId = blocks.stream().collect(java.util.stream.Collectors.toMap(AulaBlock::getId, block -> block));
+        for (int i = 0; i < blockIds.size(); i++) {
+            byId.get(blockIds.get(i)).reorder(i);
+        }
+        return aulaBlockRepository.listByItem(itemId);
     }
 
     @Transactional
@@ -183,8 +297,6 @@ public class CourseService {
         if (itemIds.size() != items.size() || !existingIds.containsAll(itemIds)) {
             throw CursosException.badRequest("Reorder list must include every course item exactly once");
         }
-        // Two-phase update avoids unique (course_id, sort_order) collisions on adjacent
-        // swaps.
         for (int i = 0; i < items.size(); i++) {
             items.get(i).reorder(-(i + 1));
         }
@@ -220,13 +332,64 @@ public class CourseService {
 
     public CourseItem requireVideoItem(long courseId, long itemId, long resourceId) {
         var item = requireItemOfCourse(courseId, itemId);
-        if (item.getItemType() != CourseItemType.VIDEO) {
-            throw CursosException.badRequest("Item is not a video aula");
-        }
-        if (item.getResource() == null || !item.getResource().getId().equals(resourceId)) {
-            throw CursosException.badRequest("Resource does not belong to course item");
+        var match = aulaBlockRepository.listByItem(itemId)
+                                       .stream()
+                                       .filter(block -> block.getBlockType() == AulaBlockType.VIDEO)
+                                       .filter(block -> block.getResource() != null && block.getResource().getId().equals(resourceId))
+                                       .findFirst();
+        if (match.isEmpty()) {
+            throw CursosException.badRequest("Resource does not belong to a video block on this aula");
         }
         return item;
+    }
+
+    private AulaBlock requireFirstBlockOfType(long itemId, AulaBlockType type) {
+        return aulaBlockRepository.listByItem(itemId)
+                                  .stream()
+                                  .filter(block -> block.getBlockType() == type)
+                                  .findFirst()
+                                  .orElseThrow(() -> CursosException.badRequest("Aula has no %s block".formatted(type.name().toLowerCase(Locale.ROOT))));
+    }
+
+    private AulaBlock requireBlockOfItem(long courseId, long itemId, long blockId) {
+        requireItemOfCourse(courseId, itemId);
+        var block = aulaBlockRepository.findById(blockId)
+                                       .orElseThrow(() -> CursosException.notFound("Aula block not found: %d".formatted(blockId)));
+        if (!block.getCourseItem().getId().equals(itemId)) {
+            throw CursosException.badRequest("Block does not belong to aula");
+        }
+        return block;
+    }
+
+    private void reindexBlocks(long itemId) {
+        var blocks = aulaBlockRepository.listByItem(itemId);
+        for (int i = 0; i < blocks.size(); i++) {
+            blocks.get(i).reorder(-(i + 1));
+        }
+        aulaBlockRepository.flush();
+        for (int i = 0; i < blocks.size(); i++) {
+            blocks.get(i).reorder(i);
+        }
+    }
+
+    private void validateMediaFile(AulaBlockType type, String contentType, String filename, byte[] content) {
+        if (filename == null || filename.isBlank() || filename.length() > 255) {
+            throw CursosException.badRequest("Filename is required and must be at most 255 characters");
+        }
+        if (content == null || content.length == 0) {
+            throw CursosException.badRequest("Media content is required");
+        }
+        var normalizedType = contentType != null ? contentType.toLowerCase(Locale.ROOT) : "";
+        if (type == AulaBlockType.IMAGE && !normalizedType.startsWith("image/")) {
+            throw CursosException.badRequest("IMAGE content type must be image/*");
+        }
+        if (type == AulaBlockType.VIDEO && !normalizedType.startsWith("video/")) {
+            throw CursosException.badRequest("VIDEO content type must be video/*");
+        }
+        var maxBytes = type == AulaBlockType.VIDEO ? mediaProperties.maxVideoBytes() : mediaProperties.maxImageBytes();
+        if (content.length > maxBytes) {
+            throw CursosException.badRequest("Media exceeds configured size limit");
+        }
     }
 
     private void applyCategories(Course course, List<Long> categoryIds) {

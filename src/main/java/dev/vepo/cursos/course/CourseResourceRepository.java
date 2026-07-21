@@ -23,10 +23,10 @@ public class CourseResourceRepository {
 
     public Optional<CourseResource> findByCourseAndResourceId(long courseId, long resourceId) {
         var results = entityManager.createQuery("""
-                                                SELECT i.resource
-                                                FROM CourseItem i
-                                                WHERE i.course.id = :courseId
-                                                  AND i.resource.id = :resourceId
+                                                SELECT b.resource
+                                                FROM AulaBlock b
+                                                WHERE b.courseItem.course.id = :courseId
+                                                  AND b.resource.id = :resourceId
                                                 """, CourseResource.class)
                                    .setParameter("courseId", courseId)
                                    .setParameter("resourceId", resourceId)

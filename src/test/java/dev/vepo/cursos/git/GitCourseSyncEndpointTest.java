@@ -71,9 +71,9 @@ class GitCourseSyncEndpointTest {
                .body("course.summary", equalTo("From git"))
                .body("course.categories.name", org.hamcrest.Matchers.hasItem("Git Category"))
                .body("items.size()", equalTo(1))
-               .body("items[0].itemType", equalTo("MARKDOWN"))
+               .body("items[0].blocks[0].blockType", equalTo("MARKDOWN"))
                .body("items[0].title", equalTo("Welcome"))
-               .body("items[0].markdownBody", equalTo("# Hello from git\n"));
+               .body("items[0].blocks[0].markdownBody", equalTo("# Hello from git\n"));
 
         // second sync updates existing markdown item
         given().header(teacherAuth)

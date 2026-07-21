@@ -8,8 +8,8 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
+import dev.vepo.cursos.course.AulaBlockType;
 import dev.vepo.cursos.course.CourseItemResponse;
-import dev.vepo.cursos.course.CourseItemType;
 import dev.vepo.cursos.course.CourseService;
 import dev.vepo.cursos.identity.CurrentPassportUser;
 import dev.vepo.cursos.infra.CursosException;
@@ -51,11 +51,11 @@ public class UploadMediaItemEndpoint {
             throw CursosException.badRequest("Media file is required");
         }
         try {
-            var itemType = CourseItemType.valueOf(type.toUpperCase());
+            var itemType = AulaBlockType.valueOf(type.toUpperCase());
             var bytes = java.nio.file.Files.readAllBytes(file.uploadedFile());
             var contentType = file.contentType() != null ? file.contentType() : "application/octet-stream";
-            return CourseItemResponse.load(courseService.addMediaItem(courseId, title, itemType, contentType, file.fileName(), bytes,
-                                                                      currentPassportUser.require()));
+            return courseService.toItemResponse(courseService.addMediaItem(courseId, title, itemType, contentType, file.fileName(), bytes,
+                                                                           currentPassportUser.require()));
         } catch (IllegalArgumentException ex) {
             throw CursosException.badRequest("type must be IMAGE or VIDEO");
         } catch (IOException ex) {

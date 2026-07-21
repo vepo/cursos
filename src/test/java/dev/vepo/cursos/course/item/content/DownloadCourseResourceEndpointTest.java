@@ -124,7 +124,7 @@ class DownloadCourseResourceEndpointTest {
                .post("/api/courses/{id}/items/media", courseId)
                .then()
                .statusCode(HttpStatus.SC_OK)
-               .body("resourceId", notNullValue());
+               .body("blocks[0].resourceId", notNullValue());
 
         return given().header(teacherAuth)
                       .when()
@@ -132,7 +132,7 @@ class DownloadCourseResourceEndpointTest {
                       .then()
                       .statusCode(HttpStatus.SC_OK)
                       .extract()
-                      .path("items[0].resourceId");
+                      .path("items[0].blocks[0].resourceId");
     }
 
     private Header auth(PassportUser user) {

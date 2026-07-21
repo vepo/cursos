@@ -3,6 +3,7 @@ package dev.vepo.cursos.course.playback;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
+import dev.vepo.cursos.course.AulaBlockType;
 import dev.vepo.cursos.course.CourseService;
 import dev.vepo.cursos.course.CourseStatus;
 import dev.vepo.cursos.enrollment.EnrollmentRepository;
@@ -17,6 +18,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 @Path("/courses/{courseId}/items/{itemId}/playback-ticket")
@@ -45,7 +47,9 @@ public class CreatePlaybackTicketEndpoint {
     @POST
     @Authenticated
     @Operation(operationId = "createPlaybackTicket")
-    public PlaybackTicketResponse create(@PathParam("courseId") long courseId, @PathParam("itemId") long itemId) {
+    public PlaybackTicketResponse create(@PathParam("courseId") long courseId,
+                                         @PathParam("itemId") long itemId,
+                                         @QueryParam("resourceId") Long resourceId) {
         var user = currentPassportUser.require();
         var course = courseService.require(courseId);
         boolean teacher = course.isTaughtBy(user.id());
@@ -58,12 +62,19 @@ public class CreatePlaybackTicketEndpoint {
         if (!teacher && course.getStatus() != CourseStatus.PUBLISHED) {
             throw CursosException.forbidden("Course is not available");
         }
-        var item = courseService.requireItemOfCourse(courseId, itemId);
-        if (item.getResource() == null) {
-            throw CursosException.badRequest("Video resource is missing");
-        }
-        courseService.requireVideoItem(courseId, itemId, item.getResource().getId());
-        var ticket = playbackTicketService.issue(courseId, itemId, item.getResource().getId());
+        courseService.requireItemOfCourse(courseId, itemId);
+        var resolvedResourceId = resourceId != null
+                                                    ? resourceId
+                                                    : courseService.listBlocks(itemId)
+                                                                   .stream()
+                                                                   .filter(block -> block.getBlockType() == AulaBlockType.VIDEO)
+                                                                   .filter(block -> block.getResource() != null)
+                                                                   .findFirst()
+                                                                   .orElseThrow(() -> CursosException.badRequest("Video resource is missing"))
+                                                                   .getResource()
+                                                                   .getId();
+        courseService.requireVideoItem(courseId, itemId, resolvedResourceId);
+        var ticket = playbackTicketService.issue(courseId, itemId, resolvedResourceId);
         return new PlaybackTicketResponse(ticket.url(), ticket.expiresAt());
     }
 

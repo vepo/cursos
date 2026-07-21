@@ -39,10 +39,10 @@ public class CreateLinkItemEndpoint {
     @Authenticated
     @Operation(operationId = "createLinkItem")
     public CourseItemResponse create(@PathParam("courseId") long courseId, @Valid CreateLinkItemRequest request) {
-        return CourseItemResponse.load(courseService.addLinkItem(courseId,
-                                                                 request.title(),
-                                                                 request.linkUrl(),
-                                                                 request.linkDescription(),
-                                                                 currentPassportUser.require()));
+        return courseService.toItemResponse(courseService.addLinkItem(courseId,
+                                                                      request.title(),
+                                                                      request.linkUrl(),
+                                                                      request.linkDescription(),
+                                                                      currentPassportUser.require()));
     }
 }

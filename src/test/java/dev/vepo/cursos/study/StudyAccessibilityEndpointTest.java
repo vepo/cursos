@@ -217,7 +217,7 @@ class StudyAccessibilityEndpointTest {
                .then()
                .statusCode(HttpStatus.SC_OK)
                .body("id", equalTo(second.getId().intValue()))
-               .body("markdownBody", equalTo("# Setup body"));
+               .body("blocks[0].markdownBody", equalTo("# Setup body"));
 
         given().header(teacherAuth)
                .when()
@@ -225,6 +225,6 @@ class StudyAccessibilityEndpointTest {
                .then()
                .statusCode(HttpStatus.SC_OK)
                .body("id", equalTo(third.getId().intValue()))
-               .body("markdownBody", equalTo("# DI body"));
+               .body("blocks[0].markdownBody", equalTo("# DI body"));
     }
 }

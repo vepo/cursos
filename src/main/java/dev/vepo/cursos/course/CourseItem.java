@@ -4,8 +4,6 @@ import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,25 +27,8 @@ public class CourseItem {
     @Column(nullable = false, length = 200)
     private String title;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "item_type", nullable = false, length = 20)
-    private CourseItemType itemType;
-
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
-
-    @Column(name = "markdown_body")
-    private String markdownBody;
-
-    @Column(name = "link_url", length = 2000)
-    private String linkUrl;
-
-    @Column(name = "link_description", length = 2000)
-    private String linkDescription;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "resource_id")
-    private CourseResource resource;
 
     @Column(name = "source_path", length = 500)
     private String sourcePath;
@@ -60,10 +41,9 @@ public class CourseItem {
 
     protected CourseItem() {}
 
-    public CourseItem(Course course, String title, CourseItemType itemType, int sortOrder) {
+    public CourseItem(Course course, String title, int sortOrder) {
         this.course = course;
         this.title = title;
-        this.itemType = itemType;
         this.sortOrder = sortOrder;
         var now = Instant.now();
         this.createdAt = now;
@@ -82,28 +62,8 @@ public class CourseItem {
         return title;
     }
 
-    public CourseItemType getItemType() {
-        return itemType;
-    }
-
     public int getSortOrder() {
         return sortOrder;
-    }
-
-    public String getMarkdownBody() {
-        return markdownBody;
-    }
-
-    public String getLinkUrl() {
-        return linkUrl;
-    }
-
-    public String getLinkDescription() {
-        return linkDescription;
-    }
-
-    public CourseResource getResource() {
-        return resource;
     }
 
     public String getSourcePath() {
@@ -120,22 +80,6 @@ public class CourseItem {
 
     public void updateTitle(String title) {
         this.title = title;
-        this.updatedAt = Instant.now();
-    }
-
-    public void updateMarkdown(String markdownBody) {
-        this.markdownBody = markdownBody;
-        this.updatedAt = Instant.now();
-    }
-
-    public void updateLink(String linkUrl, String linkDescription) {
-        this.linkUrl = linkUrl;
-        this.linkDescription = linkDescription != null ? linkDescription : "";
-        this.updatedAt = Instant.now();
-    }
-
-    public void assignResource(CourseResource resource) {
-        this.resource = resource;
         this.updatedAt = Instant.now();
     }
 

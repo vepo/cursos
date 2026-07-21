@@ -37,7 +37,7 @@
             [attr.data-aula-state]="aulaState(aula)"
             [attr.aria-disabled]="aula.accessible ? null : 'true'"
             (click)="openAula(aula)">
-            <mat-icon class="aula-icon" [fontIcon]="aulaStateIcon(aula)" aria-hidden="true"></mat-icon>
+            <mat-icon class="aula-icon" [fontIcon]="aulaSidebarIcon(aula)" aria-hidden="true"></mat-icon>
             {{ aula.title }}
           </button>
         }
@@ -165,39 +165,48 @@
             }
           }
         </header>
-        @if (item.itemType === 'MARKDOWN') {
-          <div class="markdown" [innerHTML]="renderMarkdown(item.markdownBody)"></div>
-        } @else if (item.itemType === 'LINK') {
-          <div class="link-resource card">
-            @if (item.linkDescription) {
-              <p class="link-resource__description">{{ item.linkDescription }}</p>
-            } @else {
-              <p class="muted">Recurso externo</p>
-            }
-            @if (item.linkUrl) {
-              <a
-                class="btn-primary"
-                data-testid="open-link-resource"
-                [href]="item.linkUrl"
-                target="_blank"
-                rel="noopener noreferrer">Abrir recurso</a>
-            }
-          </div>
-        } @else if (item.itemType === 'VIDEO') {
-          <div class="media-frame card">
-            @if (playbackLoading) {
-              <p class="muted" data-testid="video-loading">Carregando vídeo…</p>
-            } @else if (playbackError) {
-              <p class="error" data-testid="video-error" role="alert">{{ playbackError }}</p>
-            } @else if (playbackUrl) {
-              <video controls [src]="playbackUrl" data-testid="video-player"></video>
-            }
-          </div>
-        } @else if (item.itemType === 'IMAGE' && item.resourceId) {
-          <div class="media-frame card">
-            <img [src]="imageResourceUrl(item.resourceId)" [alt]="item.title || ''" />
-          </div>
-        }
+        <div class="aula-blocks" data-testid="aula-blocks">
+          @for (block of orderedBlocks(item); track block.id) {
+            <section
+              class="aula-block"
+              [attr.data-testid]="'aula-block-' + block.id"
+              [attr.data-block-type]="block.blockType">
+              @if (block.blockType === 'MARKDOWN') {
+                <div class="markdown" appCourseMermaid [innerHTML]="renderBlockMarkdown(block)"></div>
+              } @else if (block.blockType === 'LINK') {
+                <div class="link-resource card">
+                  @if (block.linkDescription) {
+                    <p class="link-resource__description">{{ block.linkDescription }}</p>
+                  } @else {
+                    <p class="muted">Recurso externo</p>
+                  }
+                  @if (block.linkUrl) {
+                    <a
+                      class="btn-primary"
+                      data-testid="open-link-resource"
+                      [href]="block.linkUrl"
+                      target="_blank"
+                      rel="noopener noreferrer">Abrir recurso</a>
+                  }
+                </div>
+              } @else if (block.blockType === 'VIDEO') {
+                <div class="media-frame card">
+                  @if (playbackLoading && !playbackUrlFor(block)) {
+                    <p class="muted" data-testid="video-loading">Carregando vídeo…</p>
+                  } @else if (playbackError && !playbackUrlFor(block)) {
+                    <p class="error" data-testid="video-error" role="alert">{{ playbackError }}</p>
+                  } @else if (playbackUrlFor(block); as url) {
+                    <video controls [src]="url" data-testid="video-player"></video>
+                  }
+                </div>
+              } @else if (block.blockType === 'IMAGE' && block.resourceId) {
+                <div class="media-frame card">
+                  <img [src]="imageResourceUrl(block.resourceId)" [alt]="item.title || ''" />
+                </div>
+              }
+            </section>
+          }
+        </div>
 
         <section data-testid="aula-discussion" aria-labelledby="aula-discussion-heading">
           <h3 id="aula-discussion-heading">Comentários</h3>

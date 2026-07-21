@@ -66,8 +66,19 @@ class UpdateCourseItemEndpointTest {
                .then()
                .statusCode(HttpStatus.SC_OK)
                .body("title", equalTo("Docs v2"))
-               .body("linkUrl", equalTo("https://example.com/new"))
-               .body("linkDescription", equalTo("updated"));
+               .body("blocks[0].linkUrl", equalTo("https://example.com/new"))
+               .body("blocks[0].linkDescription", equalTo("updated"));
+
+        given().header(teacherAuth)
+               .contentType(ContentType.JSON)
+               .body("""
+                     {"title":"Video aula renamed"}
+                     """)
+               .when()
+               .put("/api/courses/{courseId}/items/{itemId}", courseId, linkItemId)
+               .then()
+               .statusCode(HttpStatus.SC_OK)
+               .body("title", equalTo("Video aula renamed"));
 
         given().header(teacherAuth)
                .contentType(ContentType.JSON)
@@ -95,11 +106,11 @@ class UpdateCourseItemEndpointTest {
                      {"title":"Welcome v2","markdownBody":"# Hello"}
                      """)
                .when()
-               .put("/api/courses/{courseId}/items/{itemId}", courseId, markdownItemId)
+               .put("/api/courses/{courseId}/items/{itemId}/markdown", courseId, markdownItemId)
                .then()
                .statusCode(HttpStatus.SC_OK)
                .body("title", equalTo("Welcome v2"))
-               .body("markdownBody", equalTo("# Hello"));
+               .body("blocks[0].markdownBody", equalTo("# Hello"));
 
         given().header(teacherAuth)
                .contentType(ContentType.JSON)
@@ -107,7 +118,7 @@ class UpdateCourseItemEndpointTest {
                      {"title":"Nope","markdownBody":"# x"}
                      """)
                .when()
-               .put("/api/courses/{courseId}/items/{itemId}", courseId, linkItemId)
+               .put("/api/courses/{courseId}/items/{itemId}/markdown", courseId, linkItemId)
                .then()
                .statusCode(HttpStatus.SC_BAD_REQUEST);
 

@@ -41,6 +41,9 @@ public class ReorderCourseItemsEndpoint {
     @Authenticated
     @Operation(operationId = "reorderCourseItems")
     public List<CourseItemResponse> reorder(@PathParam("courseId") long courseId, @Valid ReorderCourseItemsRequest request) {
-        return courseService.reorder(courseId, request.itemIds(), currentPassportUser.require()).stream().map(CourseItemResponse::load).toList();
+        return courseService.reorder(courseId, request.itemIds(), currentPassportUser.require())
+                            .stream()
+                            .map(courseService::toItemResponse)
+                            .toList();
     }
 }

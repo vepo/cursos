@@ -4,27 +4,34 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
+import { AulaBlocksApi } from '../../generated/api/aulaBlocks.service';
 import { CategoriesApi } from '../../generated/api/categories.service';
 import { CourseImagesApi } from '../../generated/api/courseImages.service';
 import { CourseItemsApi } from '../../generated/api/courseItems.service';
 import { CoursesApi } from '../../generated/api/courses.service';
 import { GitApi } from '../../generated/api/git.service';
+import { AulaBlockResponse } from '../../generated/model/aulaBlockResponse';
+import { AulaBlockType } from '../../generated/model/aulaBlockType';
 import { CategoryResponse } from '../../generated/model/categoryResponse';
 import { CourseDetailResponse } from '../../generated/model/courseDetailResponse';
 import { CourseGitStatusResponse } from '../../generated/model/courseGitStatusResponse';
 import { CourseImageAssetResponse } from '../../generated/model/courseImageAssetResponse';
 import { CourseItemResponse } from '../../generated/model/courseItemResponse';
-import { CourseItemType } from '../../generated/model/courseItemType';
 import { ConfirmationService } from '../../services/confirmation.service';
 import { DirtyComponent } from '../../services/unsaved-changes.guard';
 import { renderCourseMarkdown } from '../../markdown/course-markdown';
+import { CourseMermaidDirective } from '../../markdown/course-mermaid.directive';
 
 type EditorSelection = 'details' | 'new-item' | number;
-type ItemEditorType = Extract<CourseItemType, 'MARKDOWN' | 'LINK' | 'VIDEO'>;
+type ShortcutBlockType = Extract<AulaBlockType, 'MARKDOWN' | 'LINK' | 'VIDEO'>;
+type AppendBlockType = AulaBlockType;
 
 @Component({
   selector: 'app-course-edit',
@@ -36,8 +43,11 @@ type ItemEditorType = Extract<CourseItemType, 'MARKDOWN' | 'LINK' | 'VIDEO'>;
     MatButtonModule,
     MatDialogModule,
     MatFormFieldModule,
+    MatIconModule,
     MatInputModule,
-    MatSelectModule
+    MatMenuModule,
+    MatSelectModule,
+    CourseMermaidDirective
   ]
 })
 export class CourseEditComponent implements OnInit, DirtyComponent {
@@ -46,6 +56,7 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   private readonly coursesApi = inject(CoursesApi);
   private readonly categoriesApi = inject(CategoriesApi);
   private readonly courseItemsApi = inject(CourseItemsApi);
+  private readonly aulaBlocksApi = inject(AulaBlocksApi);
   private readonly courseImagesApi = inject(CourseImagesApi);
   private readonly gitApi = inject(GitApi);
   private readonly confirmation = inject(ConfirmationService);
@@ -69,7 +80,9 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   coverImageUrl: string | null = null;
   coverImageAssetId: number | null = null;
   selection: EditorSelection = 'details';
-  itemType: ItemEditorType = 'MARKDOWN';
+  selectedBlockId: number | null = null;
+  /** Shortcut type when creating a new aula. */
+  itemType: ShortcutBlockType = 'MARKDOWN';
   itemTitle = '';
   itemBody = '';
   linkUrl = '';
@@ -83,6 +96,7 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
   gitStatus: CourseGitStatusResponse | null = null;
   message = '';
   reorderPending = false;
+  blockReorderPending = false;
   dirty = false;
   private savedSnapshot = '';
 
@@ -129,6 +143,7 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
         return;
       }
       this.selection = 'details';
+      this.selectedBlockId = null;
       this.applyDetailsToForm();
       this.captureSnapshot();
     });
@@ -154,7 +169,21 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
         return;
       }
       this.selection = 'new-item';
+      this.selectedBlockId = null;
       this.resetItemForm();
+      this.captureSnapshot();
+    });
+  }
+
+  selectBlock(block: AulaBlockResponse): void {
+    if (!block.id || typeof this.selection !== 'number') {
+      return;
+    }
+    this.confirmLeaveSelection().subscribe(ok => {
+      if (!ok) {
+        return;
+      }
+      this.applyBlockToForm(block);
       this.captureSnapshot();
     });
   }
@@ -171,24 +200,92 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     return this.isPublished() ? 'Publicado' : 'Rascunho';
   }
 
-  isExistingLinkItem(): boolean {
-    return typeof this.selection === 'number'
-      && this.items.find(item => item.id === this.selection)?.itemType === 'LINK';
+  selectedAula(): CourseItemResponse | null {
+    if (typeof this.selection !== 'number') {
+      return null;
+    }
+    return this.items.find(item => item.id === this.selection) ?? null;
   }
 
-  isExistingVideoItem(): boolean {
-    return typeof this.selection === 'number'
-      && this.items.find(item => item.id === this.selection)?.itemType === 'VIDEO';
+  orderedBlocks(item: CourseItemResponse | null = this.selectedAula()): AulaBlockResponse[] {
+    return [...(item?.blocks ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
+
+  selectedBlock(): AulaBlockResponse | null {
+    if (this.selectedBlockId == null) {
+      return null;
+    }
+    return this.orderedBlocks().find(block => block.id === this.selectedBlockId) ?? null;
+  }
+
+  firstBlockType(item: CourseItemResponse): AulaBlockType | undefined {
+    return this.orderedBlocks(item)[0]?.blockType;
+  }
+
+  blockTypeIcon(type: AulaBlockType | undefined): string {
+    switch (type) {
+      case 'VIDEO':
+        return 'play_circle';
+      case 'LINK':
+        return 'link';
+      case 'IMAGE':
+        return 'image';
+      case 'MARKDOWN':
+      default:
+        return 'article';
+    }
+  }
+
+  blockTypeLabel(type: AulaBlockType | undefined): string {
+    switch (type) {
+      case 'VIDEO':
+        return 'Vídeo';
+      case 'LINK':
+        return 'Link';
+      case 'IMAGE':
+        return 'Imagem';
+      case 'MARKDOWN':
+      default:
+        return 'Markdown';
+    }
   }
 
   isMarkdownEditor(): boolean {
     if (this.selection === 'new-item') {
       return this.itemType === 'MARKDOWN';
     }
-    if (typeof this.selection !== 'number') {
-      return false;
+    return this.selectedBlock()?.blockType === 'MARKDOWN';
+  }
+
+  isLinkEditor(): boolean {
+    if (this.selection === 'new-item') {
+      return this.itemType === 'LINK';
     }
-    return this.items.find(item => item.id === this.selection)?.itemType === 'MARKDOWN';
+    return this.selectedBlock()?.blockType === 'LINK';
+  }
+
+  isMediaEditor(): boolean {
+    if (this.selection === 'new-item') {
+      return this.itemType === 'VIDEO';
+    }
+    const type = this.selectedBlock()?.blockType;
+    return type === 'VIDEO' || type === 'IMAGE';
+  }
+
+  canDeleteBlock(block: AulaBlockResponse): boolean {
+    return this.orderedBlocks().length > 1 && !!block.id && !this.blockReorderPending;
+  }
+
+  canMoveBlockUp(block: AulaBlockResponse): boolean {
+    const blocks = this.orderedBlocks();
+    const index = blocks.findIndex(candidate => candidate.id === block.id);
+    return index > 0 && !this.blockReorderPending;
+  }
+
+  canMoveBlockDown(block: AulaBlockResponse): boolean {
+    const blocks = this.orderedBlocks();
+    const index = blocks.findIndex(candidate => candidate.id === block.id);
+    return index >= 0 && index < blocks.length - 1 && !this.blockReorderPending;
   }
 
   previewMarkdownHtml(): string {
@@ -244,9 +341,10 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       if (typeof this.selection === 'number') {
         const selected = this.items.find(item => item.id === this.selection);
         if (selected) {
-          this.applyItemToForm(selected);
+          this.applyItemToForm(selected, this.selectedBlockId);
         } else {
           this.selection = 'details';
+          this.selectedBlockId = null;
           this.applyDetailsToForm();
         }
       }
@@ -281,7 +379,7 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       this.createItem();
       return;
     }
-    this.updateItem(this.selection);
+    this.updateSelectedAula(this.selection);
   }
 
   publish(): void {
@@ -320,7 +418,7 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     if (this.dirty && this.selection !== item.id) {
       this.confirmation.confirm({
         title: 'Alterações não salvas',
-        message: 'Há alterações não salvas no editor atual. Descartar e excluir o item?',
+        message: 'Há alterações não salvas no editor atual. Descartar e excluir a aula?',
         confirmLabel: 'Excluir',
         cancelLabel: 'Cancelar',
         destructive: true
@@ -332,6 +430,98 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       return;
     }
     this.confirmAndDeleteItem(item);
+  }
+
+  moveBlock(block: AulaBlockResponse, direction: -1 | 1): void {
+    if (!block.id || typeof this.selection !== 'number' || this.blockReorderPending) {
+      return;
+    }
+    if (this.dirty) {
+      this.confirmLeaveSelection().subscribe(ok => {
+        if (ok) {
+          this.performBlockMove(block, direction);
+        }
+      });
+      return;
+    }
+    this.performBlockMove(block, direction);
+  }
+
+  deleteBlock(block: AulaBlockResponse): void {
+    if (!block.id || typeof this.selection !== 'number' || !this.canDeleteBlock(block)) {
+      return;
+    }
+    const itemId = this.selection;
+    this.confirmation.confirm({
+      title: 'Excluir bloco',
+      message: `Excluir o bloco ${this.blockTypeLabel(block.blockType)}?`,
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      destructive: true
+    }).subscribe(ok => {
+      if (!ok || !block.id) {
+        return;
+      }
+      this.aulaBlocksApi.deleteAulaBlock(block.id, this.courseId, itemId).subscribe({
+        next: () => {
+          if (this.selectedBlockId === block.id) {
+            this.selectedBlockId = null;
+          }
+          this.message = 'Bloco excluído';
+          this.load();
+        },
+        error: () => {
+          this.message = 'Não foi possível excluir o bloco.';
+        }
+      });
+    });
+  }
+
+  appendBlock(type: AppendBlockType): void {
+    if (typeof this.selection !== 'number') {
+      return;
+    }
+    const itemId = this.selection;
+    const run = (): void => {
+      if (type === 'MARKDOWN') {
+        this.aulaBlocksApi.appendMarkdownBlock(this.courseId, itemId, { markdownBody: '' }).subscribe(block => {
+          this.afterBlockAppended(block);
+        });
+        return;
+      }
+      if (type === 'LINK') {
+        this.aulaBlocksApi.appendLinkBlock(this.courseId, itemId, {
+          linkUrl: 'https://example.com',
+          linkDescription: ''
+        }).subscribe(block => {
+          this.afterBlockAppended(block);
+        });
+        return;
+      }
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = type === 'VIDEO' ? 'video/*' : 'image/*';
+      input.onchange = () => {
+        const file = input.files?.[0];
+        if (!file) {
+          return;
+        }
+        this.aulaBlocksApi.appendMediaBlock(this.courseId, itemId, type, file).subscribe(block => {
+          this.afterBlockAppended(block);
+        });
+      };
+      input.click();
+    };
+
+    if (this.dirty) {
+      this.confirmLeaveSelection().subscribe(ok => {
+        if (ok) {
+          run();
+        }
+      });
+      return;
+    }
+    run();
   }
 
   onCoverFileSelected(event: Event): void {
@@ -474,8 +664,10 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       return false;
     }
     const needle = `course-asset:${assetId}`;
-    return this.items.some(item => (item.markdownBody ?? '').includes(needle))
-      || this.itemBody.includes(needle);
+    const inBlocks = this.items.some(item =>
+      (item.blocks ?? []).some(block => (block.markdownBody ?? '').includes(needle))
+    );
+    return inBlocks || this.itemBody.includes(needle);
   }
 
   linkGit(): void {
@@ -494,6 +686,52 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       this.gitStatus = status;
       this.message = 'Sincronização concluída';
       this.load();
+    });
+  }
+
+  private afterBlockAppended(block: AulaBlockResponse): void {
+    this.message = 'Bloco adicionado';
+    this.selectedBlockId = block.id ?? null;
+    this.captureSnapshot();
+    this.load();
+  }
+
+  private performBlockMove(block: AulaBlockResponse, direction: -1 | 1): void {
+    if (typeof this.selection !== 'number' || !block.id) {
+      return;
+    }
+    const itemId = this.selection;
+    const blocks = this.orderedBlocks();
+    const index = blocks.findIndex(candidate => candidate.id === block.id);
+    const swap = index + direction;
+    if (index < 0 || swap < 0 || swap >= blocks.length) {
+      return;
+    }
+    const previous = [...blocks];
+    const ordered = [...blocks];
+    const [removed] = ordered.splice(index, 1);
+    ordered.splice(swap, 0, removed);
+    this.blockReorderPending = true;
+    const blockIds = ordered.map(entry => entry.id!).filter(Boolean);
+    this.aulaBlocksApi.reorderAulaBlocks(this.courseId, itemId, { blockIds }).subscribe({
+      next: result => {
+        const aula = this.selectedAula();
+        if (aula) {
+          aula.blocks = result ?? ordered;
+        }
+        this.blockReorderPending = false;
+        this.message = 'Ordem dos blocos atualizada';
+        this.applyItemToForm(aula!, this.selectedBlockId);
+        this.captureSnapshot();
+      },
+      error: () => {
+        const aula = this.selectedAula();
+        if (aula) {
+          aula.blocks = previous;
+        }
+        this.blockReorderPending = false;
+        this.message = 'Não foi possível reordenar os blocos.';
+      }
     });
   }
 
@@ -519,15 +757,15 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       error: () => {
         this.items = previous;
         this.reorderPending = false;
-        this.message = 'Não foi possível reordenar os itens.';
+        this.message = 'Não foi possível reordenar as aulas.';
       }
     });
   }
 
   private confirmAndDeleteItem(item: CourseItemResponse): void {
     this.confirmation.confirm({
-      title: 'Excluir item',
-      message: `Excluir o item "${item.title}"?`,
+      title: 'Excluir aula',
+      message: `Excluir a aula "${item.title}"?`,
       confirmLabel: 'Excluir',
       cancelLabel: 'Cancelar',
       destructive: true
@@ -538,8 +776,9 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
       this.courseItemsApi.deleteCourseItem(this.courseId, item.id).subscribe(() => {
         if (this.selection === item.id) {
           this.selection = 'details';
+          this.selectedBlockId = null;
         }
-        this.message = 'Item excluído';
+        this.message = 'Aula excluída';
         this.load();
       });
     });
@@ -585,36 +824,57 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     ).subscribe(item => this.afterItemSaved(item));
   }
 
-  private updateItem(itemId: number): void {
+  private titleUpdate$(item: CourseItemResponse): Observable<unknown> {
+    return this.courseItemsApi.updateCourseItemTitle(this.courseId, item.id!, {
+      title: this.itemTitle
+    });
+  }
+
+  private updateSelectedAula(itemId: number): void {
     const item = this.items.find(candidate => candidate.id === itemId);
     if (!item) {
       return;
     }
-    if (item.itemType === 'MARKDOWN') {
-      this.courseItemsApi.updateMarkdownItem(this.courseId, itemId, {
-        title: this.itemTitle,
-        markdownBody: this.itemBody
-      }).subscribe(() => this.afterItemUpdated());
-      return;
+    const block = this.selectedBlock();
+    // Content first, then title (title helpers may rewrite the first markdown/link block).
+    this.blockUpdate$(itemId, block).pipe(
+      switchMap(() => this.titleUpdate$(item))
+    ).subscribe({
+      next: () => this.afterItemUpdated(),
+      error: () => {
+        this.message = 'Não foi possível salvar a aula.';
+      }
+    });
+  }
+
+  private blockUpdate$(itemId: number, block: AulaBlockResponse | null): Observable<unknown> {
+    if (!block?.id) {
+      return of(null);
     }
-    if (item.itemType === 'LINK') {
-      this.courseItemsApi.updateLinkItem(this.courseId, itemId, {
-        title: this.itemTitle,
+    if (block.blockType === 'MARKDOWN') {
+      return this.aulaBlocksApi.updateMarkdownBlock(block.id, this.courseId, itemId, {
+        markdownBody: this.itemBody
+      });
+    }
+    if (block.blockType === 'LINK') {
+      return this.aulaBlocksApi.updateLinkBlock(block.id, this.courseId, itemId, {
         linkUrl: this.linkUrl,
         linkDescription: this.linkDescription
-      }).subscribe(() => this.afterItemUpdated());
+      });
     }
+    return of(null);
   }
 
   private afterItemSaved(item: CourseItemResponse): void {
-    this.message = 'Item criado';
+    this.message = 'Aula criada';
     this.selection = item.id ?? 'details';
+    this.selectedBlockId = this.orderedBlocks(item)[0]?.id ?? null;
     this.captureSnapshot();
     this.load();
   }
 
   private afterItemUpdated(): void {
-    this.message = 'Item atualizado';
+    this.message = 'Aula atualizada';
     this.captureSnapshot();
     this.load();
   }
@@ -625,12 +885,32 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     this.categoryIds = (this.detail?.course?.categories ?? []).map(c => c.id!).filter(Boolean);
   }
 
-  private applyItemToForm(item: CourseItemResponse): void {
-    this.itemType = item.itemType === 'LINK' || item.itemType === 'VIDEO' ? item.itemType : 'MARKDOWN';
+  private applyItemToForm(item: CourseItemResponse, preferBlockId: number | null = null): void {
     this.itemTitle = item.title ?? '';
-    this.itemBody = item.markdownBody ?? '';
-    this.linkUrl = item.linkUrl ?? '';
-    this.linkDescription = item.linkDescription ?? '';
+    this.mediaFile = null;
+    this.mediaFileName = '';
+    this.mediaMimeType = '';
+    this.mediaFileSize = 0;
+    const blocks = this.orderedBlocks(item);
+    const preferred = preferBlockId != null
+      ? blocks.find(block => block.id === preferBlockId)
+      : undefined;
+    const block = preferred ?? blocks[0] ?? null;
+    if (block) {
+      this.applyBlockToForm(block);
+    } else {
+      this.selectedBlockId = null;
+      this.itemBody = '';
+      this.linkUrl = '';
+      this.linkDescription = '';
+    }
+  }
+
+  private applyBlockToForm(block: AulaBlockResponse): void {
+    this.selectedBlockId = block.id ?? null;
+    this.itemBody = block.markdownBody ?? '';
+    this.linkUrl = block.linkUrl ?? '';
+    this.linkDescription = block.linkDescription ?? '';
     this.mediaFile = null;
     this.mediaFileName = '';
     this.mediaMimeType = '';
@@ -682,6 +962,7 @@ export class CourseEditComponent implements OnInit, DirtyComponent {
     return JSON.stringify({
       kind: 'item',
       selection: this.selection,
+      selectedBlockId: this.selectedBlockId,
       itemType: this.itemType,
       itemTitle: this.itemTitle,
       itemBody: this.itemBody,

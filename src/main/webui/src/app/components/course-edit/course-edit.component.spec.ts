@@ -7,6 +7,7 @@ import { of } from 'rxjs';
 
 import { CategoriesApi } from '../../generated/api/categories.service';
 import { CourseImagesApi } from '../../generated/api/courseImages.service';
+import { AulaBlocksApi } from '../../generated/api/aulaBlocks.service';
 import { CourseItemsApi } from '../../generated/api/courseItems.service';
 import { CoursesApi } from '../../generated/api/courses.service';
 import { GitApi } from '../../generated/api/git.service';
@@ -55,7 +56,14 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
         categories: []
       },
       items: [
-        { id: 1, title: 'Intro', itemType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Hi' }
+        {
+          id: 1,
+          title: 'Intro',
+          sortOrder: 0,
+          blocks: [
+            { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Hi' }
+          ]
+        }
       ]
     }));
 
@@ -63,9 +71,14 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
       listCategories: of([{ id: 1, name: 'Backend', slug: 'backend' }])
     });
     const courseItemsApi = jasmine.createSpyObj('CourseItemsApi', [
-      'createMarkdownItem', 'updateMarkdownItem', 'createLinkItem', 'updateLinkItem',
+      'createMarkdownItem', 'updateMarkdownItem', 'createLinkItem', 'updateLinkItem', 'updateCourseItemTitle',
       'uploadMediaItem', 'deleteCourseItem', 'reorderCourseItems'
     ]);
+    const aulaBlocksApi = jasmine.createSpyObj('AulaBlocksApi', [
+      'appendMarkdownBlock', 'appendLinkBlock', 'appendMediaBlock',
+      'updateMarkdownBlock', 'updateLinkBlock', 'deleteAulaBlock', 'reorderAulaBlocks'
+    ]);
+
     const courseImagesApi = jasmine.createSpyObj('CourseImagesApi', {
       listCourseImages: of([]),
       uploadCourseImage: of({ id: 1, signedUrl: '/api/media/images/1/1' }),
@@ -91,6 +104,7 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CategoriesApi, useValue: categoriesApi },
         { provide: CourseItemsApi, useValue: courseItemsApi },
+        { provide: AulaBlocksApi, useValue: aulaBlocksApi },
         { provide: CourseImagesApi, useValue: courseImagesApi },
         { provide: GitApi, useValue: gitApi },
         { provide: ConfirmationService, useValue: confirmation },
@@ -188,13 +202,16 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
     component.selectItem({
       id: 1,
       title: 'Intro',
-      itemType: 'MARKDOWN',
       sortOrder: 0,
-      markdownBody: '# Hi'
+      blocks: [
+        { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Hi' }
+      ]
     });
     fixture.detectChanges();
 
     const preview = fixture.nativeElement.querySelector('[data-testid="markdown-preview"]');
+    expect(preview).not.toBeNull();
+    expect(preview.querySelector('.markdown[appcoursemermaid], .markdown')).not.toBeNull();
     expect(preview).withContext('Markdown editor shows live preview').not.toBeNull();
     expect(preview?.querySelector('.markdown')?.innerHTML ?? '').toContain('<h1>');
 
@@ -226,9 +243,14 @@ describe('CourseEditComponent new course full-width shell', () => {
       listCategories: of([{ id: 1, name: 'Backend', slug: 'backend' }])
     });
     const courseItemsApi = jasmine.createSpyObj('CourseItemsApi', [
-      'createMarkdownItem', 'updateMarkdownItem', 'createLinkItem', 'updateLinkItem',
+      'createMarkdownItem', 'updateMarkdownItem', 'createLinkItem', 'updateLinkItem', 'updateCourseItemTitle',
       'uploadMediaItem', 'deleteCourseItem', 'reorderCourseItems'
     ]);
+    const aulaBlocksApi = jasmine.createSpyObj('AulaBlocksApi', [
+      'appendMarkdownBlock', 'appendLinkBlock', 'appendMediaBlock',
+      'updateMarkdownBlock', 'updateLinkBlock', 'deleteAulaBlock', 'reorderAulaBlocks'
+    ]);
+
     const courseImagesApi = jasmine.createSpyObj('CourseImagesApi', {
       listCourseImages: of([]),
       uploadCourseImage: of({ id: 1, signedUrl: '/api/media/images/1/1' }),
@@ -254,6 +276,7 @@ describe('CourseEditComponent new course full-width shell', () => {
         { provide: CoursesApi, useValue: coursesApi },
         { provide: CategoriesApi, useValue: categoriesApi },
         { provide: CourseItemsApi, useValue: courseItemsApi },
+        { provide: AulaBlocksApi, useValue: aulaBlocksApi },
         { provide: CourseImagesApi, useValue: courseImagesApi },
         { provide: GitApi, useValue: gitApi },
         { provide: ConfirmationService, useValue: confirmation },
@@ -285,3 +308,113 @@ describe('CourseEditComponent new course full-width shell', () => {
       .toBe(1);
   });
 });
+
+
+describe('CourseEditComponent composite aula blocks (T7)', () => {
+  let fixture: ComponentFixture<CourseEditComponent>;
+  let aulaBlocksApi: jasmine.SpyObj<AulaBlocksApi>;
+
+  beforeEach(async () => {
+    const coursesApi = jasmine.createSpyObj('CoursesApi', [
+      'findCourse', 'createCourse', 'updateCourse', 'publishCourse', 'unpublishCourse'
+    ]);
+    coursesApi.findCourse.and.returnValue(of({
+      teaching: true,
+      enrolled: false,
+      course: {
+        id: 10,
+        title: 'Quarkus na prática',
+        summary: 'Backend',
+        status: 'DRAFT',
+        categories: []
+      },
+      items: [
+        {
+          id: 1,
+          title: 'Intro',
+          sortOrder: 0,
+          blocks: [
+            { id: 10, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 0, markdownBody: '# Hi' },
+            { id: 11, courseItemId: 1, blockType: 'LINK', sortOrder: 1, linkUrl: 'https://example.com', linkDescription: 'Docs' }
+          ]
+        }
+      ]
+    }));
+
+    const categoriesApi = jasmine.createSpyObj('CategoriesApi', {
+      listCategories: of([{ id: 1, name: 'Backend', slug: 'backend' }])
+    });
+    const courseItemsApi = jasmine.createSpyObj('CourseItemsApi', [
+      'createMarkdownItem', 'updateMarkdownItem', 'createLinkItem', 'updateLinkItem', 'updateCourseItemTitle',
+      'uploadMediaItem', 'deleteCourseItem', 'reorderCourseItems'
+    ]);
+    aulaBlocksApi = jasmine.createSpyObj('AulaBlocksApi', [
+      'appendMarkdownBlock', 'appendLinkBlock', 'appendMediaBlock',
+      'updateMarkdownBlock', 'updateLinkBlock', 'deleteAulaBlock', 'reorderAulaBlocks'
+    ]);
+    aulaBlocksApi.appendMarkdownBlock.and.returnValue(of({
+      id: 12, courseItemId: 1, blockType: 'MARKDOWN', sortOrder: 2, markdownBody: ''
+    }) as never);
+    aulaBlocksApi.reorderAulaBlocks.and.returnValue(of([]) as never);
+    aulaBlocksApi.deleteAulaBlock.and.returnValue(of(null) as never);
+    const courseImagesApi = jasmine.createSpyObj('CourseImagesApi', {
+      listCourseImages: of([]),
+      uploadCourseImage: of({ id: 1, signedUrl: '/api/media/images/1/1' }),
+      setCourseCover: of({ id: 10, coverImageAssetId: 1, coverImageUrl: '/api/media/images/10/1' }),
+      clearCourseCover: of({ id: 10, coverImageAssetId: null }),
+      deleteCourseImage: of(null)
+    });
+    const gitApi = jasmine.createSpyObj('GitApi', {
+      getCourseGitStatus: of({ status: 'IDLE', remoteUrl: '', defaultBranch: 'main' }),
+      linkCourseGit: of({ status: 'IDLE' }),
+      syncCourseGit: of({ status: 'IDLE' })
+    });
+    const confirmation = jasmine.createSpyObj('ConfirmationService', ['confirm', 'confirmOrTrue']);
+    confirmation.confirm.and.returnValue(of(true));
+    confirmation.confirmOrTrue.and.callFake((needs: boolean) => of(!needs));
+
+    await TestBed.configureTestingModule({
+      imports: [CourseEditComponent, NoopAnimationsModule],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: CoursesApi, useValue: coursesApi },
+        { provide: CategoriesApi, useValue: categoriesApi },
+        { provide: CourseItemsApi, useValue: courseItemsApi },
+        { provide: AulaBlocksApi, useValue: aulaBlocksApi },
+        { provide: CourseImagesApi, useValue: courseImagesApi },
+        { provide: GitApi, useValue: gitApi },
+        { provide: ConfirmationService, useValue: confirmation },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: convertToParamMap({ id: '10' }) }
+          }
+        }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(CourseEditComponent);
+    fixture.detectChanges();
+  });
+
+  it('shouldListOrderedBlocksForSelectedAula', () => {
+    const component = fixture.componentInstance;
+    component.selectItem(component.items[0]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[data-testid="block-list"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="block-row-10"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="block-row-11"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="append-block"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="markdown-preview"]')).not.toBeNull();
+  });
+
+  it('shouldUseFirstBlockTypeIconInAulaSidebar', () => {
+    const icon = fixture.nativeElement.querySelector('[data-testid="nav-item-1"] mat-icon');
+    expect(icon).not.toBeNull();
+    expect(icon?.getAttribute('data-mat-icon-name') || icon?.getAttribute('fontIcon')).toBe('article');
+  });
+});
+

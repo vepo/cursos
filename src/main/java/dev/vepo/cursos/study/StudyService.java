@@ -53,11 +53,14 @@ public class StudyService {
             if (completed) {
                 completedCount++;
             }
+            var blocks = courseService.listBlocks(item.getId());
+            var firstBlockType = blocks.isEmpty() ? null : blocks.get(0).getBlockType();
             items.add(new StudyItemResponse(item.getId(),
                                             item.getTitle(),
                                             item.getSortOrder(),
                                             completed,
-                                            teacher || allPreviousCompleted));
+                                            teacher || allPreviousCompleted,
+                                            firstBlockType));
             allPreviousCompleted = allPreviousCompleted && completed;
         }
         int total = courseItems.size();

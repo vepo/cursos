@@ -13,7 +13,7 @@ Authentication uses **Passport JWT**. Login obtains token from Passport (`:8080`
 | Request enrollment | `/` card or course preview | authenticated | **Disponível / Solicitado** → **Solicitar matrícula** |
 | Teacher area | `/teacher` | authenticated | Open the top-right menu icon → **Ensinar → Meus cursos** → choose a course → **Publicar curso** / **Despublicar** / Editar / Alunos / Progresso |
 | Create course | `/teacher/courses/new` | authenticated | Open the top-right menu icon → **Ensinar → Novo curso** → save → editor |
-| Course edit | `/teacher/courses/:courseId/edit` | course teacher | Left item list → edit details/items → optional **capa** + Markdown **galeria** (`course-asset:id`) → **Publicar curso** / **Despublicar**; unsaved changes and deletes use in-app confirmation dialogs |
+| Course edit | `/teacher/courses/:courseId/edit` | course teacher | Left **aulas** list (icon = first block type) → edit aula title + ordered **blocks** → **+ Bloco** / create shortcuts (aula + one block) → Markdown preview + **galeria** → **Publicar curso** / **Despublicar**; cannot delete last block; unsaved changes use confirmation dialogs |
 | Enrollment admin | `/teacher/courses/:courseId/students` | course teacher | Sections **Solicitações pendentes** / **Alunos matriculados** / **Recusados** with counts → **Aprovar** / **Recusar** (confirmação) → **Matricular aluno** via busca no Passport (já matriculados exibem badge) |
 | Progress admin | `/teacher/courses/:courseId/progress` | course teacher | Class aggregates → students sorted by least progress → expand for per-aula checklist → **Marcar concluída** / **Desfazer** (Teacher adjust; cascade confirmed) |
 | Category admin | `/admin/categories` | `cursos.admin` | Open the top-right menu icon → **Admin → Categorias** → create categories |
@@ -54,7 +54,7 @@ Teaching courses live under **Ensinar → Meus cursos**, not on the catalog home
 
 | Concern | Behaviour |
 |---------|-----------|
-| Aula tree | Ordered course items; completed / current / accessible / locked with color + Material icon (`check_circle` / `play_arrow` / `radio_button_unchecked` / `lock`) |
+| Aula tree | Ordered aulas; completed / current / accessible / locked via color; Material icon = **first block type** (`article` / `play_circle` / `link` / `image`) or `lock` when locked |
 | Unlock | First aula open; later aulas require all previous completed |
 | Progress bar | Sidebar shows completed/total and percentage |
 | Rollback | **Desfazer progresso** clears selected aula and all later aulas; clears conclusion below 100% |
@@ -63,18 +63,21 @@ Teaching courses live under **Ensinar → Meus cursos**, not on the catalog home
 | Completion navigation | **Concluir aula** opens the next ordered aula after completion; at 100% the finish screen replaces aula content |
 | Finish / certificate | Finish screen offers **Baixar certificado** (authenticated PDF); catalog shows **Concluído** while status stays `ENROLLED` |
 | Teacher preview | Course teacher bypasses sequential lock; opening own course lands on overview (no auto-resume) |
-| Markdown | Study + teacher preview use [Marked](https://marked.js.org/) + DOMPurify (GFM); `course-asset:` images; raw markdown source in teacher editor |
+| Markdown | Study + teacher preview use [Marked](https://marked.js.org/) + DOMPurify (GFM); fenced Mermaid diagrams; `course-asset:` images; raw markdown source in teacher editor |
 | Comments | Enrolled student or teacher on accessible aula |
 | Upvote | One per user/comment; toggle removes |
 | Hide / restore | Teacher only; students never see hidden comments |
 
-## Course item display
+## Aula blocks (composite aula)
 
-| Type | Student view | Teacher edit |
-|------|--------------|--------------|
-| MARKDOWN | Rendered sanitized HTML (Marked) | Markdown source + live preview |
-| IMAGE | Inline image from media endpoint | Upload image |
-| VIDEO | Inline video player | Upload video |
+Each **aula** (course item) has an ordered list of **blocks**. Study stacks all blocks; progress / **Concluir aula** / discussion stay per-aula.
+
+| Block type | Student view | Teacher edit |
+|------------|--------------|--------------|
+| MARKDOWN | Sanitized HTML (Marked) | Source + live **Pré-visualização** + gallery |
+| LINK | Description + **Abrir recurso** | URL + description |
+| VIDEO | Inline player (playback ticket) | Upload via shortcut or **+ Bloco** |
+| IMAGE | Inline image from media endpoint | Upload via **+ Bloco** |
 
 ## API-only features (no dedicated UI page)
 

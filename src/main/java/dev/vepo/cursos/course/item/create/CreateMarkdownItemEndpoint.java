@@ -39,6 +39,6 @@ public class CreateMarkdownItemEndpoint {
     @Authenticated
     @Operation(operationId = "createMarkdownItem")
     public CourseItemResponse create(@PathParam("courseId") long courseId, @Valid CreateMarkdownItemRequest request) {
-        return CourseItemResponse.load(courseService.addMarkdownItem(courseId, request.title(), request.markdownBody(), currentPassportUser.require()));
+        return courseService.toItemResponse(courseService.addMarkdownItem(courseId, request.title(), request.markdownBody(), currentPassportUser.require()));
     }
 }

@@ -5,13 +5,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { Observable } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of } from 'rxjs';
 import { CourseImagesApi } from '../../generated/api/courseImages.service';
 import { CourseItemsApi } from '../../generated/api/courseItems.service';
 import { CoursesApi } from '../../generated/api/courses.service';
 import { DiscussionApi } from '../../generated/api/discussion.service';
 import { ProgressApi } from '../../generated/api/progress.service';
 import { StudyApi } from '../../generated/api/study.service';
+import { AulaBlockResponse } from '../../generated/model/aulaBlockResponse';
+import { AulaBlockType } from '../../generated/model/aulaBlockType';
 import { CommentResponse } from '../../generated/model/commentResponse';
 import { CourseDetailResponse } from '../../generated/model/courseDetailResponse';
 import { CourseItemResponse } from '../../generated/model/courseItemResponse';
@@ -19,6 +21,7 @@ import { StudyItemResponse } from '../../generated/model/studyItemResponse';
 import { AuthService } from '../../services/auth.service';
 import { ConfirmationService } from '../../services/confirmation.service';
 import { extractCourseAssetIds, renderCourseMarkdown } from '../../markdown/course-markdown';
+import { CourseMermaidDirective } from '../../markdown/course-mermaid.directive';
 
 @Component({
   selector: 'app-course-view',
@@ -30,7 +33,8 @@ import { extractCourseAssetIds, renderCourseMarkdown } from '../../markdown/cour
     MatButtonModule,
     MatFormFieldModule,
     MatIconModule,
-    MatInputModule
+    MatInputModule,
+    CourseMermaidDirective
   ]
 })
 export class CourseViewComponent implements OnInit {
@@ -55,10 +59,11 @@ export class CourseViewComponent implements OnInit {
   commentDraft = '';
   commentError = '';
   aulasSidebarOpen = false;
-  playbackUrl = '';
+  /** Playback URL keyed by video block resource id. */
+  playbackByResourceId = new Map<number, string>();
   playbackLoading = false;
   playbackError = '';
-  markdownHtml = '';
+  markdownHtmlByBlockId = new Map<number, string>();
   completedItems = 0;
   totalItems = 0;
   percentComplete = 0;
@@ -203,17 +208,44 @@ export class CourseViewComponent implements OnInit {
     return aula.accessible ? 'accessible' : 'locked';
   }
 
-  aulaStateIcon(aula: StudyItemResponse): string {
-    return {
-      completed: 'check_circle',
-      current: 'play_arrow',
-      accessible: 'radio_button_unchecked',
-      locked: 'lock'
-    }[this.aulaState(aula)];
+  /** Sidebar icon: lock when locked; otherwise first-block type (FQ6). */
+  aulaSidebarIcon(aula: StudyItemResponse): string {
+    if (this.aulaState(aula) === 'locked') {
+      return 'lock';
+    }
+    return this.blockTypeIcon(aula.firstBlockType);
   }
 
-  renderMarkdown(markdown: string | undefined): string {
-    return this.markdownHtml || renderCourseMarkdown(markdown, this.markdownUrls);
+  blockTypeIcon(type: AulaBlockType | undefined): string {
+    switch (type) {
+      case 'VIDEO':
+        return 'play_circle';
+      case 'LINK':
+        return 'link';
+      case 'IMAGE':
+        return 'image';
+      case 'MARKDOWN':
+      default:
+        return 'article';
+    }
+  }
+
+  orderedBlocks(item: CourseItemResponse | null = this.selectedAula): AulaBlockResponse[] {
+    return [...(item?.blocks ?? [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
+
+  renderBlockMarkdown(block: AulaBlockResponse): string {
+    if (block.id != null && this.markdownHtmlByBlockId.has(block.id)) {
+      return this.markdownHtmlByBlockId.get(block.id)!;
+    }
+    return renderCourseMarkdown(block.markdownBody, this.markdownUrls);
+  }
+
+  playbackUrlFor(block: AulaBlockResponse): string {
+    if (!block.resourceId) {
+      return '';
+    }
+    return this.playbackByResourceId.get(block.resourceId) ?? '';
   }
 
   publishComment(): void {
@@ -353,18 +385,25 @@ export class CourseViewComponent implements OnInit {
     this.commentDraft = '';
     this.commentError = '';
     this.clearPlayback();
-    this.markdownHtml = '';
+    this.markdownHtmlByBlockId = new Map();
     this.markdownUrls = new Map();
     this.studyApi.getStudyItem(this.courseId, itemId).subscribe(item => {
       this.selectedAula = item;
-      if (item.itemType === 'VIDEO') {
-        this.loadPlaybackTicket(itemId);
-      }
-      if (item.itemType === 'MARKDOWN') {
-        this.loadMarkdownImages(item.markdownBody);
-      }
+      this.loadBlocksContent(item, itemId);
     });
     this.loadComments(itemId);
+  }
+
+  private loadBlocksContent(item: CourseItemResponse, itemId: number): void {
+    const blocks = this.orderedBlocks(item);
+    const markdownBlocks = blocks.filter(block => block.blockType === 'MARKDOWN');
+    const markdownBodies = markdownBlocks.map(block => block.markdownBody ?? '').join('\n');
+    this.loadMarkdownImages(markdownBodies, markdownBlocks);
+
+    const videoBlocks = blocks.filter(block => block.blockType === 'VIDEO' && block.resourceId);
+    if (videoBlocks.length) {
+      this.loadPlaybackTickets(itemId, videoBlocks.map(block => block.resourceId!));
+    }
   }
 
   private clearAulaSelection(): void {
@@ -375,40 +414,61 @@ export class CourseViewComponent implements OnInit {
     this.comments = [];
     this.displayedComments = [];
     this.clearPlayback();
-    this.markdownHtml = '';
+    this.markdownHtmlByBlockId = new Map();
     this.markdownUrls = new Map();
   }
 
-  private loadMarkdownImages(markdown: string | undefined): void {
-    const assetIds = extractCourseAssetIds(markdown);
+  private loadMarkdownImages(combinedMarkdown: string, markdownBlocks: AulaBlockResponse[]): void {
+    const assetIds = extractCourseAssetIds(combinedMarkdown);
+    const apply = (urls: Map<number, string>): void => {
+      this.markdownUrls = urls;
+      const next = new Map<number, string>();
+      for (const block of markdownBlocks) {
+        if (block.id != null) {
+          next.set(block.id, renderCourseMarkdown(block.markdownBody, urls));
+        }
+      }
+      this.markdownHtmlByBlockId = next;
+    };
     if (!assetIds.length) {
-      this.markdownHtml = renderCourseMarkdown(markdown);
+      apply(new Map());
       return;
     }
     this.courseImagesApi.createImageTickets(this.courseId, { assetIds }).subscribe({
       next: response => {
-        this.markdownUrls = new Map(
+        apply(new Map(
           (response.tickets ?? [])
             .filter(ticket => ticket.assetId != null && ticket.url)
             .map(ticket => [ticket.assetId!, ticket.url!])
-        );
-        this.markdownHtml = renderCourseMarkdown(markdown, this.markdownUrls);
+        ));
       },
-      error: () => {
-        this.markdownHtml = renderCourseMarkdown(markdown);
-      }
+      error: () => apply(new Map())
     });
   }
 
-  private loadPlaybackTicket(itemId: number): void {
+  private loadPlaybackTickets(itemId: number, resourceIds: number[]): void {
     this.playbackLoading = true;
     this.playbackError = '';
-    this.playbackUrl = '';
-    this.courseItemsApi.createPlaybackTicket(this.courseId, itemId).subscribe({
-      next: ticket => {
-        this.playbackUrl = ticket.url ?? '';
+    this.playbackByResourceId = new Map();
+    const uniqueIds = [...new Set(resourceIds)];
+    forkJoin(
+      uniqueIds.map(resourceId =>
+        this.courseItemsApi.createPlaybackTicket(this.courseId, itemId, resourceId).pipe(
+          map(ticket => ({ resourceId, url: ticket.url ?? '' })),
+          catchError(() => of({ resourceId, url: '' }))
+        )
+      )
+    ).subscribe({
+      next: tickets => {
         this.playbackLoading = false;
-        if (!this.playbackUrl) {
+        const next = new Map<number, string>();
+        for (const ticket of tickets) {
+          if (ticket.url) {
+            next.set(ticket.resourceId, ticket.url);
+          }
+        }
+        this.playbackByResourceId = next;
+        if (!next.size) {
           this.playbackError = 'Não foi possível obter o vídeo.';
         }
       },
@@ -420,7 +480,7 @@ export class CourseViewComponent implements OnInit {
   }
 
   private clearPlayback(): void {
-    this.playbackUrl = '';
+    this.playbackByResourceId = new Map();
     this.playbackLoading = false;
     this.playbackError = '';
   }

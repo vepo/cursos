@@ -6,9 +6,10 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import dev.vepo.cursos.course.AulaBlockRepository;
+import dev.vepo.cursos.course.AulaBlockType;
 import dev.vepo.cursos.course.Course;
 import dev.vepo.cursos.course.CourseItemRepository;
-import dev.vepo.cursos.course.CourseItemType;
 import dev.vepo.cursos.course.CourseService;
 import dev.vepo.cursos.course.CourseStatus;
 import dev.vepo.cursos.course.MediaProperties;
@@ -30,6 +31,7 @@ public class CourseImageAssetService {
     private final CourseService courseService;
     private final CourseImageAssetRepository courseImageAssetRepository;
     private final CourseItemRepository courseItemRepository;
+    private final AulaBlockRepository aulaBlockRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ImageTicketService imageTicketService;
     private final MediaProperties mediaProperties;
@@ -38,12 +40,14 @@ public class CourseImageAssetService {
     public CourseImageAssetService(CourseService courseService,
                                    CourseImageAssetRepository courseImageAssetRepository,
                                    CourseItemRepository courseItemRepository,
+                                   AulaBlockRepository aulaBlockRepository,
                                    EnrollmentRepository enrollmentRepository,
                                    ImageTicketService imageTicketService,
                                    MediaProperties mediaProperties) {
         this.courseService = courseService;
         this.courseImageAssetRepository = courseImageAssetRepository;
         this.courseItemRepository = courseItemRepository;
+        this.aulaBlockRepository = aulaBlockRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.imageTicketService = imageTicketService;
         this.mediaProperties = mediaProperties;
@@ -156,8 +160,9 @@ public class CourseImageAssetService {
         var needle = "course-asset:%d".formatted(assetId);
         return courseItemRepository.listByCourse(courseId)
                                    .stream()
-                                   .filter(item -> item.getItemType() == CourseItemType.MARKDOWN)
-                                   .map(item -> item.getMarkdownBody() == null ? "" : item.getMarkdownBody())
+                                   .flatMap(item -> aulaBlockRepository.listByItem(item.getId()).stream())
+                                   .filter(block -> block.getBlockType() == AulaBlockType.MARKDOWN)
+                                   .map(block -> block.getMarkdownBody() == null ? "" : block.getMarkdownBody())
                                    .anyMatch(body -> body.contains(needle));
     }
 

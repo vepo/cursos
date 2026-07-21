@@ -23,7 +23,7 @@ Do not delete these users or the primary sample project without updating tests a
 
 ## When you change the schema (Flyway)
 
-**Pre-production:** amend [`V1.0.0__Database_Creation.sql`](../../src/main/resources/db/migration/V1.0.0__Database_Creation.sql) only — see [cursos-flyway.mdc](cursos-flyway.mdc). Do not add `V1.0.x` migration files.
+**Pre-production note superseded:** Learn is deployed — add the next Flyway version under `db/migration/` ([cursos-flyway.mdc](cursos-flyway.mdc)). Do not rewrite `V1.0.0`.
 
 Work through this list **in the same PR** as the schema change:
 

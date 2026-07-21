@@ -39,21 +39,21 @@ class CourseServiceTest {
         var course = Given.course(teacher, "Media", CourseStatus.DRAFT, List.of());
 
         assertThrows(CursosException.class,
-                     () -> courseService.addMediaItem(course.getId(), "t", CourseItemType.MARKDOWN, "image/png", "a.png", new byte[] { 1 }, teacher));
+                     () -> courseService.addMediaItem(course.getId(), "t", AulaBlockType.MARKDOWN, "image/png", "a.png", new byte[] { 1 }, teacher));
         assertThrows(CursosException.class,
-                     () -> courseService.addMediaItem(course.getId(), " ", CourseItemType.IMAGE, "image/png", "a.png", new byte[] { 1 }, teacher));
+                     () -> courseService.addMediaItem(course.getId(), " ", AulaBlockType.IMAGE, "image/png", "a.png", new byte[] { 1 }, teacher));
         assertThrows(CursosException.class,
-                     () -> courseService.addMediaItem(course.getId(), "t", CourseItemType.IMAGE, "image/png", " ", new byte[] { 1 }, teacher));
+                     () -> courseService.addMediaItem(course.getId(), "t", AulaBlockType.IMAGE, "image/png", " ", new byte[] { 1 }, teacher));
         assertThrows(CursosException.class,
-                     () -> courseService.addMediaItem(course.getId(), "t", CourseItemType.IMAGE, "image/png", "a.png", null, teacher));
+                     () -> courseService.addMediaItem(course.getId(), "t", AulaBlockType.IMAGE, "image/png", "a.png", null, teacher));
         assertThrows(CursosException.class,
-                     () -> courseService.addMediaItem(course.getId(), "t", CourseItemType.IMAGE, "video/mp4", "a.png", new byte[] { 1 }, teacher));
+                     () -> courseService.addMediaItem(course.getId(), "t", AulaBlockType.IMAGE, "video/mp4", "a.png", new byte[] { 1 }, teacher));
         assertThrows(CursosException.class,
-                     () -> courseService.addMediaItem(course.getId(), "t", CourseItemType.VIDEO, "image/png", "a.mp4", new byte[] { 1 }, teacher));
+                     () -> courseService.addMediaItem(course.getId(), "t", AulaBlockType.VIDEO, "image/png", "a.mp4", new byte[] { 1 }, teacher));
         assertThrows(CursosException.class,
                      () -> courseService.addMediaItem(course.getId(),
                                                       "t",
-                                                      CourseItemType.VIDEO,
+                                                      AulaBlockType.VIDEO,
                                                       "video/mp4",
                                                       "a.mp4",
                                                       new byte[2_000_000],

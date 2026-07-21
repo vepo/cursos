@@ -55,7 +55,7 @@ dev.vepo.cursos/
 └── infra/          # Cross-cutting HTTP, dev setup
 ```
 
-Frontend: `src/main/webui/src/app/` — `components/`, `services/`, `generated/`, `guards/`, `interceptors/`, `markdown/` (shared Marked + DOMPurify course markdown). Global dark-shell tokens and shared `.app-shell-page`, `.app-shell-sidebar`, and `.app-shell-main` layout classes live in `src/main/webui/src/styles.scss`; root header/drawer behavior lives in `app.*`.
+Frontend: `src/main/webui/src/app/` — `components/`, `services/`, `generated/`, `guards/`, `interceptors/`, `markdown/` (shared Marked + DOMPurify course markdown; Mermaid hydrate via `course-mermaid.ts` + `appCourseMermaid`). Global dark-shell tokens and shared `.app-shell-page`, `.app-shell-sidebar`, and `.app-shell-main` layout classes live in `src/main/webui/src/styles.scss`; root header/drawer behavior lives in `app.*`.
 
 Bounded contexts: [docs/domain-specification.md](docs/domain-specification.md) §Bounded contexts.
 
@@ -137,17 +137,27 @@ Base path: `/api`. OpenAPI at `/openapi`.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/courses/{id}/items/markdown` | Create markdown aula |
-| PUT | `/courses/{id}/items/{itemId}` | Update markdown aula |
-| POST | `/courses/{id}/items/link` | Create link aula (`https` only) |
-| PUT | `/courses/{id}/items/{itemId}/link` | Update link aula |
-| POST | `/courses/{id}/items/media` | Upload IMAGE/VIDEO (multipart; video up to 250 MiB) |
-| DELETE | `/courses/{id}/items/{itemId}` | Delete item |
-| POST | `/courses/{id}/items/reorder` | Reorder |
+| POST | `/courses/{id}/items/markdown` | Create aula + first MARKDOWN block (shortcut) |
+| POST | `/courses/{id}/items/link` | Create aula + first LINK block (shortcut) |
+| POST | `/courses/{id}/items/media` | Create aula + first IMAGE/VIDEO block (shortcut) |
+| PUT | `/courses/{id}/items/{itemId}` | Update aula title |
+| PUT | `/courses/{id}/items/{itemId}/markdown` | Update title + first MARKDOWN block (shortcut) |
+| PUT | `/courses/{id}/items/{itemId}/link` | Update title + first LINK block (shortcut) |
+| POST | `/courses/{id}/items/{itemId}/blocks/markdown` | Append MARKDOWN block |
+| PUT | `/courses/{id}/items/{itemId}/blocks/{blockId}/markdown` | Update MARKDOWN block |
+| POST | `/courses/{id}/items/{itemId}/blocks/link` | Append LINK block |
+| PUT | `/courses/{id}/items/{itemId}/blocks/{blockId}/link` | Update LINK block |
+| POST | `/courses/{id}/items/{itemId}/blocks/media` | Append IMAGE/VIDEO block |
+| DELETE | `/courses/{id}/items/{itemId}/blocks/{blockId}` | Delete block (forbidden if last) |
+| POST | `/courses/{id}/items/{itemId}/blocks/reorder` | Reorder blocks within aula |
+| DELETE | `/courses/{id}/items/{itemId}` | Delete aula (cascades blocks) |
+| POST | `/courses/{id}/items/reorder` | Reorder aulas |
 | GET | `/courses/{id}/resources/{resourceId}` | Download course-bound media (JWT) |
-| POST | `/courses/{id}/items/{itemId}/playback-ticket` | Issue short-lived signed video URL |
+| POST | `/courses/{id}/items/{itemId}/playback-ticket` | Issue short-lived signed video URL (`resourceId` query optional; defaults to first VIDEO) |
 | GET | `/media/playback/{courseId}/{itemId}/{resourceId}` | Public Range stream (`206`) with HMAC ticket |
 | GET | `/courses/{id}/study` | Aula tree with completion/accessibility |
+
+Item detail payloads include ordered `blocks[]`. See [feature/composite-aula.md](feature/composite-aula.md).
 
 ### Course images (cover + gallery)
 
@@ -218,7 +228,7 @@ Only enrolled students and the course teacher may participate. Student responses
 
 ## 9. Data model
 
-Baseline: `V1.0.0__Database_Creation.sql`.
+Baseline: `V1.0.0__Database_Creation.sql` (shipped). Later changes: incremental `V1.0.x__…` files (do not rewrite applied migrations).
 
 | Table | Purpose |
 |-------|---------|
@@ -228,7 +238,8 @@ Baseline: `V1.0.0__Database_Creation.sql`.
 | `tb_course_resources` | media `BYTEA`, content type, filename, size |
 | `tb_course_image_assets` | course-owned gallery/cover rasters (`BYTEA`) |
 | `tb_courses.cover_image_asset_id` | optional FK to gallery asset |
-| `tb_course_items` | position, type (`MARKDOWN`/`IMAGE`/`VIDEO`/`LINK`), markdown, `link_url`/`link_description`, resource FK |
+| `tb_course_items` | aula shell: title, sort_order (content on blocks) |
+| `tb_aula_blocks` | ordered blocks per aula: type, markdown/link fields, resource FK |
 | `tb_enrollments` | course, student, status (REQUESTED/ENROLLED/REJECTED), optional `concluded_at` |
 | `tb_item_progress` | enrollment, item, completed, adjusted_by_teacher |
 | `tb_comments` | aula author/content plus hide/moderation audit |
@@ -262,7 +273,7 @@ Progress: `round(100 * completedItems / totalItems)`.
 - Catalog, study, teacher home, and course editor use the shared two-column shell classes. Sidebars hold category filters, the aula tree, teaching courses, or editor items respectively.
 - In study, `/courses/:id` is the **Visão geral** overview (**Sobre o curso** / **Sobre o autor**). Lesson routes hide those panels. Completing an aula advances to the next lesson route; the final aula remains selected.
 - Course edit, students, progress, and category administration render page titles/actions inside main and do not add nested `mat-toolbar` chrome.
-- Markdown aulas: study view and teacher **Pré-visualização** share `app/markdown/course-markdown.ts` ([Marked](https://marked.js.org/) + DOMPurify); teacher still edits raw Markdown source.
+- Markdown aulas: study view and teacher **Pré-visualização** share `app/markdown/course-markdown.ts` ([Marked](https://marked.js.org/) + DOMPurify); fenced Mermaid blocks hydrate via `hydrateCourseMermaid` ([Mermaid](https://mermaid.js.org/), dynamic import, theme `dark`, `securityLevel: 'strict'`); teacher still edits raw Markdown source.
 - The menu has at most two levels: **Aprender**, **Ensinar**, **Conta**, **Admin**. Header display name links to **Minha conta**. Unauthenticated users see **Entrar** instead of the authenticated drawer controls.
 
 Visual design: [feature/learn-productization.md](feature/learn-productization.md), [feature/ui-visual-shell.md](feature/ui-visual-shell.md). Click paths: [docs/feature-catalog.md](docs/feature-catalog.md).
@@ -298,7 +309,7 @@ See [development-process.mdc](.cursor/rules/development-process.mdc).
 ## 13. Adding a feature
 
 1. Feature doc → domain spec → architecture → task approval → TDD.
-2. Amend Flyway baseline (pre-production).
+2. Add Flyway migration version (never rewrite shipped scripts).
 3. Entity → repository → service → endpoint → Angular.
 4. Update feature catalog and dev seed.
 

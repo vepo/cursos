@@ -10,7 +10,7 @@ Canonical domain language for **Learn** (online course platform; Maven artifact 
 
 ## Context
 
-Cursos (product name **Learn**) lets **teachers** create **courses** with ordered **course items** (markdown, image, video). **Students** discover courses in the **catalog**, **request enrollment**, and track **progress** as they complete items. **Categories** organize the catalog. Identity and login live in **Passport**; Learn stores a local **identity** mirror keyed by Passport user id. **Branding** (white-label name, logo, colors, footer) is config-driven per deployment.
+Cursos (product name **Learn**) lets **teachers** create **courses** with ordered **aulas** (**course items**), each composed of one or more **aula blocks** (markdown, image, video, link). **Students** discover courses in the **catalog**, **request enrollment**, and track **progress** as they complete aulas. **Categories** organize the catalog. Identity and login live in **Passport**; Learn stores a local **identity** mirror keyed by Passport user id. **Branding** (white-label name, logo, colors, footer) is config-driven per deployment.
 
 ```mermaid
 erDiagram
@@ -18,6 +18,7 @@ erDiagram
     Identity ||--o{ Enrollment : participates
     Category ||--o{ Course : classifies
     Course ||--o{ CourseItem : contains
+    CourseItem ||--o{ AulaBlock : composed_of
     Enrollment ||--o{ ItemProgress : tracks
     CourseItem ||--o{ ItemProgress : measured_by
     CourseItem ||--o{ Comment : discusses
@@ -36,7 +37,7 @@ Cursos is a **modular monolith**: one deployable, feature packages under `dev.ve
 | **Platform** | `infra`, `branding` | JDK/Jakarta only |
 | **Identity & access** | `auth`, `identity` | platform |
 | **Catalog** | `catalog` | platform, identity, course, enrollment, progress |
-| **Course** | `course` (incl. `course.category`, `course.item`) | platform, identity |
+| **Course** | `course` (incl. `course.category`, `course.item`, `course.item.block`) | platform, identity |
 | **Enrollment** | `enrollment` | platform, identity, course, mailer |
 | **Progress** | `progress` | platform, identity, course, enrollment, study |
 | **Study** | `study` | platform, identity, course, enrollment, progress |
@@ -116,21 +117,26 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Published course** | Course visible in **Disponível / Solicitado** for enrollment requests. | Status **PUBLISHED**; UI **Publicado** / **Publicar curso** |
 | **Draft course** | Course not listed for enrollment. | Status **DRAFT**; UI **Rascunho** / **Despublicar** |
 | **Unpublish** | Teacher action returning a published course to draft. | `POST /courses/{id}/unpublish`; UI **Despublicar** |
-| **Course item** | Single ordered piece of course content. | `CourseItem`, `tb_course_items` |
-| **Item order** | Zero-based position determining display sequence. | `CourseItem.sortOrder` |
-| **Markdown item** | Course item type storing rich text; may reference gallery assets. | `CourseItemType.MARKDOWN` |
-| **Study markdown** | Sanitized HTML rendered from Markdown in the student study view (and teacher live preview) via [Marked](https://marked.js.org/) + DOMPurify. Supports CommonMark/GFM constructs; `course-asset:` images via signed URLs; raw HTML stripped; external images rejected. | `src/app/markdown/course-markdown.ts` |
-| **Image item** | Course item type storing binary image in `tb_course_resources` (aula media). | `CourseItemType.IMAGE` |
-| **Video item** / **Video aula** | Course item type storing binary video in PostgreSQL. | `CourseItemType.VIDEO`; seekable via **Playback ticket** |
-| **Link item** / **Link aula** | Course item type with an external HTTPS URL and optional description. | `CourseItemType.LINK`; UI **Abrir recurso** |
+| **Course item** | Persisted aggregate for one **aula** (title + order); content lives in **aula blocks**. | `CourseItem`, `tb_course_items` |
+| **Item order** | Zero-based position of aulas in the course. | `CourseItem.sortOrder` |
+| **Aula block** | Ordered content fragment inside one aula (not shown as its own tree entry). | `AulaBlock`, `tb_aula_blocks` |
+| **Block type** | Kind of aula block: Markdown, Video, Link, or Image. | `AulaBlockType` |
+| **Block order** | Zero-based position of blocks within an aula. | `AulaBlock.sortOrder` |
+| **Markdown block** | Aula block storing rich text; may reference gallery assets. | `AulaBlockType.MARKDOWN` |
+| **Study markdown** | Sanitized HTML rendered from Markdown in the student study view (and teacher live preview) via [Marked](https://marked.js.org/) + DOMPurify. Supports CommonMark/GFM constructs; fenced Mermaid diagrams via [Mermaid](https://mermaid.js.org/) (hydrated after sanitize); `course-asset:` images via signed URLs; raw HTML stripped; external images rejected. | `src/app/markdown/course-markdown.ts`, `course-mermaid.ts` |
+| **Mermaid diagram** | Course markdown fenced block language `mermaid`, rendered as SVG in study and teacher preview. | All Mermaid diagram types; `securityLevel: 'strict'`; theme dark; invalid source shows error + keeps text |
+| **Image block** | Aula block storing binary image in `tb_course_resources`. | `AulaBlockType.IMAGE` |
+| **Video block** | Aula block storing binary video in PostgreSQL. | `AulaBlockType.VIDEO`; seekable via **Playback ticket** |
+| **Link block** | Aula block with an external HTTPS URL and optional description. | `AulaBlockType.LINK`; UI **Abrir recurso** |
 | **Playback ticket** | Short-lived signed URL authorizing media without Bearer headers. | Video Range stream; image asset URLs |
-| **Reorder items** | Teacher action changing item sequence. | `POST …/items/reorder` |
+| **Reorder items** | Teacher action changing **aula** sequence. | `POST …/items/reorder` |
+| **Reorder blocks** | Teacher action changing **block** sequence inside an aula. | `POST …/items/{id}/blocks/reorder` |
 
 ### Aula discussion
 
 | Term | Meaning | Code / notes |
 |------|---------|--------------|
-| **Aula** | Student-facing name for one ordered **course item** in the study experience. | UI term; domain code remains `CourseItem` |
+| **Aula** | Student-facing name for one ordered **course item** in the study experience; may contain multiple **aula blocks**. | UI term; domain code remains `CourseItem` |
 | **Comment** | A user's message attached to one aula. | UI **Comentário**; author is a Passport identity |
 | **Comentar** | Action that posts a new comment on the selected aula. | Discussion composer CTA (not course publish) |
 | **Upvote** | Positive-only vote on a comment, unique per user/comment; a second click removes it. Downvotes do not exist. | UI **▲** |
@@ -196,12 +202,16 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 
 ### Course items
 
-1. **MARKDOWN** items must have non-empty `markdown_text`; `media_content` is null.
-2. **IMAGE** and **VIDEO** items must have non-null `media_content` and `media_content_type`.
-3. Enrolled students and the teacher may **read** items; only the teacher may **mutate** items.
-4. The first **aula** is accessible; each later aula is accessible to a student only after all preceding item positions are complete.
-5. Sequential accessibility is enforced by the API and UI. Locked content, progress, and discussion operations return 403.
-6. The course teacher bypasses sequential locking for preview.
+1. Every **aula** has **≥1 aula block**; empty aulas are not allowed.
+2. **MARKDOWN** blocks must have non-empty `markdown_body`; `resource_id` is null.
+3. **IMAGE** and **VIDEO** blocks must have non-null `media` via `resource_id`.
+4. Multiple blocks of the same **block type** are allowed; there is no max block count.
+5. Enrolled students and the teacher may **read** aulas; only the teacher may **mutate** aulas/blocks.
+6. The first **aula** is accessible; each later aula is accessible to a student only after all preceding item positions are complete.
+7. Sequential accessibility is enforced by the API and UI. Locked content, progress, and discussion operations return 403.
+8. The course teacher bypasses sequential locking for preview.
+9. **Item progress** and **comments** are scoped to the **aula** (`course_item_id`), not to individual blocks.
+10. **Concluir aula** is explicit only (no auto-complete from media playback).
 
 ### Enrollment
 
@@ -233,7 +243,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 
 1. A course has at most one **course cover**, referencing a **course image asset** owned by that course.
 2. Gallery assets are not course items and do not affect progress or sequential unlock.
-3. Markdown may embed only `course-asset:{id}` references to assets of the same course; external image URLs are rejected by the renderer. Study markdown is produced by Marked + DOMPurify (GFM-capable); raw HTML is stripped/sanitized.
+3. Markdown may embed only `course-asset:{id}` references to assets of the same course; external image URLs are rejected by the renderer. Study markdown is produced by Marked + DOMPurify (GFM-capable); raw HTML is stripped/sanitized. Fenced ```mermaid blocks are hydrated client-side with Mermaid (`securityLevel: 'strict'`); invalid diagrams must not break the aula page.
 4. Deleting an asset is blocked while it is the cover or referenced by any markdown body on that course.
 5. Image bytes are served via short-lived signed URLs (no Bearer on `<img>`).
 
@@ -286,12 +296,17 @@ erDiagram
     CourseItem {
         bigint id PK
         bigint course_id FK
-        int position
-        varchar type
+        int sort_order
         varchar title
-        text markdown_text
-        bytea media_content
-        varchar media_content_type
+    }
+    AulaBlock {
+        bigint id PK
+        bigint course_item_id FK
+        int sort_order
+        varchar block_type
+        text markdown_body
+        varchar link_url
+        bigint resource_id FK
     }
     Enrollment {
         bigint id PK
@@ -336,6 +351,7 @@ erDiagram
     Identity ||--o{ Course : teaches
     Category ||--o{ Course : classifies
     Course ||--o{ CourseItem : contains
+    CourseItem ||--o{ AulaBlock : composed_of
     Identity ||--o{ Enrollment : student
     Course ||--o{ Enrollment : has
     Enrollment ||--o{ ItemProgress : tracks

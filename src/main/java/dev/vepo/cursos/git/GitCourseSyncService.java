@@ -13,10 +13,12 @@ import java.util.Map;
 import org.yaml.snakeyaml.Yaml;
 
 import dev.vepo.cursos.category.CategoryService;
+import dev.vepo.cursos.course.AulaBlock;
+import dev.vepo.cursos.course.AulaBlockRepository;
+import dev.vepo.cursos.course.AulaBlockType;
 import dev.vepo.cursos.course.Course;
 import dev.vepo.cursos.course.CourseItem;
 import dev.vepo.cursos.course.CourseItemRepository;
-import dev.vepo.cursos.course.CourseItemType;
 import dev.vepo.cursos.course.CourseResource;
 import dev.vepo.cursos.course.CourseResourceRepository;
 import dev.vepo.cursos.course.CourseService;
@@ -32,6 +34,7 @@ public class GitCourseSyncService {
     private final CourseService courseService;
     private final CourseGitLinkRepository courseGitLinkRepository;
     private final CourseItemRepository courseItemRepository;
+    private final AulaBlockRepository aulaBlockRepository;
     private final CourseResourceRepository courseResourceRepository;
     private final CategoryService categoryService;
 
@@ -39,11 +42,13 @@ public class GitCourseSyncService {
     public GitCourseSyncService(CourseService courseService,
                                 CourseGitLinkRepository courseGitLinkRepository,
                                 CourseItemRepository courseItemRepository,
+                                AulaBlockRepository aulaBlockRepository,
                                 CourseResourceRepository courseResourceRepository,
                                 CategoryService categoryService) {
         this.courseService = courseService;
         this.courseGitLinkRepository = courseGitLinkRepository;
         this.courseItemRepository = courseItemRepository;
+        this.aulaBlockRepository = aulaBlockRepository;
         this.courseResourceRepository = courseResourceRepository;
         this.categoryService = categoryService;
     }
@@ -146,31 +151,35 @@ public class GitCourseSyncService {
                 throw CursosException.badRequest("Missing course file: %s".formatted(path));
             }
             keepPaths.add(path);
-            var itemType = switch (type.toLowerCase(Locale.ROOT)) {
-                case "markdown", "md" -> CourseItemType.MARKDOWN;
-                case "image" -> CourseItemType.IMAGE;
-                case "video" -> CourseItemType.VIDEO;
+            var blockType = switch (type.toLowerCase(Locale.ROOT)) {
+                case "markdown", "md" -> AulaBlockType.MARKDOWN;
+                case "image" -> AulaBlockType.IMAGE;
+                case "video" -> AulaBlockType.VIDEO;
                 default -> throw CursosException.badRequest("Unsupported item type: %s".formatted(type));
             };
             var existing = courseItemRepository.findByCourseAndSourcePath(course.getId(), path);
             final int sortOrder = order;
-            CourseItem item = existing.orElseGet(() -> new CourseItem(course, title, itemType, sortOrder));
+            CourseItem item = existing.orElseGet(() -> new CourseItem(course, title, sortOrder));
             item.updateTitle(title);
             item.reorder(sortOrder);
             item.bindSourcePath(path);
-            if (itemType == CourseItemType.MARKDOWN) {
-                item.updateMarkdown(Files.readString(file, StandardCharsets.UTF_8));
+            if (existing.isEmpty()) {
+                courseItemRepository.save(item);
+            }
+            var blocks = aulaBlockRepository.listByItem(item.getId());
+            AulaBlock block = blocks.isEmpty()
+                                               ? aulaBlockRepository.save(new AulaBlock(item, blockType, 0))
+                                               : blocks.get(0);
+            if (blockType == AulaBlockType.MARKDOWN) {
+                block.updateMarkdown(Files.readString(file, StandardCharsets.UTF_8));
             } else {
                 var bytes = Files.readAllBytes(file);
                 var contentType = Files.probeContentType(file);
                 if (contentType == null) {
-                    contentType = itemType == CourseItemType.IMAGE ? "image/png" : "video/mp4";
+                    contentType = blockType == AulaBlockType.IMAGE ? "image/png" : "video/mp4";
                 }
                 var resource = courseResourceRepository.save(new CourseResource(contentType, file.getFileName().toString(), bytes));
-                item.assignResource(resource);
-            }
-            if (existing.isEmpty()) {
-                courseItemRepository.save(item);
+                block.assignResource(resource);
             }
             order++;
         }

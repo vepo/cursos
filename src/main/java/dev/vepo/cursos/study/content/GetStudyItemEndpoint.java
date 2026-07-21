@@ -4,6 +4,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 import dev.vepo.cursos.course.CourseItemResponse;
+import dev.vepo.cursos.course.CourseService;
 import dev.vepo.cursos.identity.CurrentPassportUser;
 import dev.vepo.cursos.study.StudyService;
 import io.quarkus.security.Authenticated;
@@ -23,11 +24,15 @@ import jakarta.ws.rs.core.MediaType;
 @Tag(name = "Study")
 public class GetStudyItemEndpoint {
     private final StudyService studyService;
+    private final CourseService courseService;
     private final CurrentPassportUser currentPassportUser;
 
     @Inject
-    public GetStudyItemEndpoint(StudyService studyService, CurrentPassportUser currentPassportUser) {
+    public GetStudyItemEndpoint(StudyService studyService,
+                                CourseService courseService,
+                                CurrentPassportUser currentPassportUser) {
         this.studyService = studyService;
+        this.courseService = courseService;
         this.currentPassportUser = currentPassportUser;
     }
 
@@ -35,6 +40,6 @@ public class GetStudyItemEndpoint {
     @Authenticated
     @Operation(operationId = "getStudyItem")
     public CourseItemResponse get(@PathParam("courseId") long courseId, @PathParam("itemId") long itemId) {
-        return CourseItemResponse.load(studyService.requireAccessibleItem(courseId, itemId, currentPassportUser.require()));
+        return courseService.toItemResponse(studyService.requireAccessibleItem(courseId, itemId, currentPassportUser.require()));
     }
 }

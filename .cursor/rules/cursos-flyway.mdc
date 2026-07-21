@@ -1,43 +1,45 @@
 ---
-description: Pre-production Flyway — amend V1.0.0, no incremental migrations yet
+description: Flyway — incremental migrations after first production deploy
 alwaysApply: true
 ---
 
-# Flyway — pre-production schema changes
+# Flyway — schema changes (production deployed)
 
-**Cursos is not in production yet** ([AGENTS.md](../../AGENTS.md)). There are no deployed databases to migrate incrementally.
+**Learn (Cursos) has a deployed baseline** (`V1.0.0`). Do **not** rewrite shipped migrations.
 
 ## Rule
 
 | Situation | Action |
 |-----------|--------|
-| New/changed table or column | **Edit** [`V1.0.0__Database_Creation.sql`](../../src/main/resources/db/migration/V1.0.0__Database_Creation.sql) |
-| Pre-production (now) | **Do not** add `V1.0.1__…`, `V1.1__…`, or other versioned migration files |
-| After first production deploy | Switch to incremental Flyway versions; do not rewrite shipped migrations |
+| New/changed table or column | Add the next versioned file under `src/main/resources/db/migration/` (e.g. `V1.0.1__…`, `V1.0.2__…`) |
+| Data backfill | Include in the same migration (or a follow-up version) with safe `INSERT … SELECT` / `UPDATE` |
+| Shipped files | **Never** edit `V1.0.0__Database_Creation.sql` or any already-applied migration on production |
 
 ## Same PR checklist
 
-1. Update `V1.0.0__Database_Creation.sql` (CREATE/ALTER in baseline script).
-2. Update [`dev-import.sql`](../../src/main/resources/dev-import.sql) if seed data needs new NOT NULL columns or FKs — see [dev-import-sql-safety.mdc](dev-import-sql-safety.mdc).
+1. Add `V1.x.y__Descriptive_Name.sql` with forward-only DDL/DML.
+2. Update [`dev-import.sql`](../../src/main/resources/dev-import.sql) for the **current** schema after all migrations — see [dev-import-sql-safety.mdc](dev-import-sql-safety.mdc).
 3. Update JPA entities to match.
-4. Run `mvn test` (Flyway runs on `@QuarkusTest` startup).
+4. Run `mvn test` (Flyway runs on `@QuarkusTest` startup; `%dev` clean-at-start applies the full chain).
 
 ## Examples
 
 ```sql
--- ✅ Pre-production: add column to CREATE TABLE in V1.0.0
-CREATE TABLE tb_projects (
-    ...
-    ticket_template_enabled BOOLEAN NOT NULL DEFAULT FALSE,
-    ...
-);
+-- ✅ Production: new versioned migration
+-- V1.0.1__Aula_Blocks.sql
+CREATE TABLE tb_aula_blocks ( ... );
+INSERT INTO tb_aula_blocks (...)
+SELECT ... FROM tb_course_items;
+ALTER TABLE tb_course_items DROP COLUMN ...;
+```
 
--- ❌ Pre-production: separate migration file
--- V1.0.1__Add_Ticket_Template.sql
-ALTER TABLE tb_projects ADD COLUMN ...
+```sql
+-- ❌ Do not amend shipped baseline for live DBs
+-- (editing V1.0.0__Database_Creation.sql)
 ```
 
 ## Never
 
-- Bypass Flyway — schema still lives under `src/main/resources/db/migration/`.
-- Add a new migration version while the project remains pre-production (unless the user explicitly requests production rollout prep).
+- Bypass Flyway — schema lives under `src/main/resources/db/migration/`.
+- Edit or delete a migration that may already be applied in production.
+- Rely on `dev-import.sql` alone for schema shape.

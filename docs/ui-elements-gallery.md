@@ -39,6 +39,10 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | Course cover | `.course-cover` | 16:9 crop on catalog/summary |
 | Image gallery | `.image-gallery` | Editor upload/select/insert |
 | Media frame | `.media-frame` | Study video/image |
+| Aula blocks stack | `.aula-blocks`, `.aula-block`, `data-testid="aula-blocks"` | Study: ordered blocks inside one aula |
+| Block list (editor) | `.block-list`, `.block-row`, `data-testid="block-list"` | Teacher: select/reorder/delete blocks |
+| Append block | `data-testid="append-block"` + `mat-menu` | Teacher: **+ Bloco** (Markdown / Vídeo / Link / Imagem) |
+| Aula type icon | `.aula-type-icon` / `.aula-icon` | First-block type in editor/study sidebar |
 
 ## Dialogs
 
@@ -53,5 +57,6 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | Outline field | `mat-form-field appearance="outline"` + `.full` | All forms |
 | File upload | `.media-upload` | Video/image file pickers |
 | Markdown editor split | `.markdown-editor-split`, `data-testid="markdown-editor-split"` | Teacher source + live preview (side-by-side ≥900px) |
-| Markdown preview | `.markdown-preview`, `data-testid="markdown-preview"` | Marked + DOMPurify HTML preview |
-| Study markdown | `.markdown` | Sanitized Marked HTML in study view |
+| Markdown preview | `.markdown-preview`, `data-testid="markdown-preview"` | Marked + DOMPurify HTML preview (+ Mermaid hydrate) |
+| Study markdown | `.markdown`, `appCourseMermaid` | Sanitized Marked HTML; `.course-mermaid` → SVG |
+| Mermaid diagram | `.course-mermaid`, `.course-mermaid-error` | Fenced `mermaid` language; invalid keeps source |

@@ -60,7 +60,7 @@ class CoursePlatformEndpointTest {
                .post("/api/courses/{id}/items/markdown", courseId)
                .then()
                .statusCode(HttpStatus.SC_OK)
-               .body("itemType", equalTo("MARKDOWN"));
+               .body("blocks[0].blockType", equalTo("MARKDOWN"));
 
         given().header(teacherAuth)
                .when()

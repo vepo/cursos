@@ -4,6 +4,8 @@ import { Marked, type Tokens } from 'marked';
 const COURSE_ASSET_IMAGE = /!\[([^\]]*)\]\(course-asset:(\d+)\)/g;
 const COURSE_ASSET_HREF = /^course-asset:(\d+)$/;
 
+export const COURSE_MERMAID_CLASS = 'course-mermaid';
+
 const PURIFY_CONFIG: Config = {
   ALLOWED_TAGS: [
     'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -46,6 +48,14 @@ export function renderCourseMarkdown(
     breaks: false,
     async: false,
     renderer: {
+      code({ text, lang }: Tokens.Code): string {
+        const language = (lang ?? '').trim().toLowerCase();
+        if (language === 'mermaid') {
+          return `<pre class="${COURSE_MERMAID_CLASS}">${escapeHtml(text)}</pre>\n`;
+        }
+        const classAttr = language ? ` class="language-${escapeAttr(language)}"` : '';
+        return `<pre><code${classAttr}>${escapeHtml(text)}</code></pre>\n`;
+      },
       image({ href, text }: Tokens.Image): string {
         return renderCourseImage(href ?? '', text ?? '', signedUrlByAssetId);
       },

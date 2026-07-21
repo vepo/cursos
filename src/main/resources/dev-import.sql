@@ -86,9 +86,9 @@ WHERE c.title = 'Introdução ao Quarkus'
   AND c.cover_image_asset_id IS NULL;
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, markdown_body, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
-SELECT c.id, item.title, 'MARKDOWN', item.sort_order, item.body, NOW(), NOW()
+SELECT c.id, item.title, item.sort_order, NOW(), NOW()
 FROM tb_courses c
 CROSS JOIN (
     VALUES
@@ -103,20 +103,22 @@ WHERE c.title = 'Introdução ao Quarkus'
       WHERE i.course_id = c.id AND i.sort_order = item.sort_order
   );
 
-UPDATE tb_course_items i
+UPDATE tb_aula_blocks b
 SET markdown_body = E'# Bem-vindo\n\nPrimeira **aula** do curso. Conclua para liberar a próxima.\n\n![Diagrama](course-asset:'
                     || a.id::text || E')'
-FROM tb_courses c
+FROM tb_course_items i
+JOIN tb_courses c ON c.id = i.course_id
 JOIN tb_course_image_assets a ON a.course_id = c.id AND a.filename = 'gallery-diagram.png'
-WHERE i.course_id = c.id
+WHERE b.course_item_id = i.id
   AND c.title = 'Introdução ao Quarkus'
   AND i.sort_order = 0
-  AND i.markdown_body NOT LIKE '%course-asset:%';
+  AND b.block_type = 'MARKDOWN'
+  AND b.markdown_body NOT LIKE '%course-asset:%';
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, resource_id, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
-SELECT c.id, 'Diagrama da arquitetura', 'IMAGE', 2, r.id, NOW(), NOW()
+SELECT c.id, 'Diagrama da arquitetura', 2, NOW(), NOW()
 FROM tb_courses c
 CROSS JOIN tb_course_resources r
 WHERE c.title = 'Introdução ao Quarkus'
@@ -127,14 +129,11 @@ WHERE c.title = 'Introdução ao Quarkus'
   );
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, link_url, link_description, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
 SELECT c.id,
        'Documentação Quarkus',
-       'LINK',
        3,
-       'https://quarkus.io/guides/',
-       'Guia oficial Quarkus (abre em nova aba).',
        NOW(), NOW()
 FROM tb_courses c
 WHERE c.title = 'Introdução ao Quarkus'
@@ -144,9 +143,9 @@ WHERE c.title = 'Introdução ao Quarkus'
   );
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, resource_id, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
-SELECT c.id, 'Vídeo de boas-vindas', 'VIDEO', 4, r.id, NOW(), NOW()
+SELECT c.id, 'Vídeo de boas-vindas', 4, NOW(), NOW()
 FROM tb_courses c
 CROSS JOIN tb_course_resources r
 WHERE c.title = 'Introdução ao Quarkus'
@@ -181,9 +180,9 @@ WHERE c.title = 'Angular na prática'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, markdown_body, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
-SELECT c.id, item.title, 'MARKDOWN', item.sort_order, item.body, NOW(), NOW()
+SELECT c.id, item.title, item.sort_order, NOW(), NOW()
 FROM tb_courses c
 CROSS JOIN (
     VALUES
@@ -217,11 +216,9 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM tb_courses WHERE title = 'Rascunho Angular');
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, markdown_body, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
-SELECT c.id, 'Outline', 'MARKDOWN', 0,
-       E'# Outline\n\n- Signals\n- SSR\n- Testes',
-       NOW(), NOW()
+SELECT c.id, 'Outline', 0, NOW(), NOW()
 FROM tb_courses c
 WHERE c.title = 'Rascunho Angular'
   AND NOT EXISTS (
@@ -253,9 +250,9 @@ WHERE c.title = 'PostgreSQL na prática'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, markdown_body, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
-SELECT c.id, item.title, 'MARKDOWN', item.sort_order, item.body, NOW(), NOW()
+SELECT c.id, item.title, item.sort_order, NOW(), NOW()
 FROM tb_courses c
 CROSS JOIN (
     VALUES
@@ -273,14 +270,11 @@ WHERE c.title = 'PostgreSQL na prática'
   );
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, link_url, link_description, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
 SELECT c.id,
        'Documentação PostgreSQL',
-       'LINK',
        3,
-       'https://www.postgresql.org/docs/current/',
-       'Docs oficiais PostgreSQL.',
        NOW(), NOW()
 FROM tb_courses c
 WHERE c.title = 'PostgreSQL na prática'
@@ -314,9 +308,9 @@ WHERE c.title = 'DevOps com containers'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO tb_course_items (
-    course_id, title, item_type, sort_order, markdown_body, created_at, updated_at
+    course_id, title, sort_order, created_at, updated_at
 )
-SELECT c.id, item.title, 'MARKDOWN', item.sort_order, item.body, NOW(), NOW()
+SELECT c.id, item.title, item.sort_order, NOW(), NOW()
 FROM tb_courses c
 CROSS JOIN (
     VALUES
@@ -343,6 +337,99 @@ SELECT
     8, 'mentor', 'Ana Mentora', 'mentor@passport.vepo.dev',
     NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM tb_courses WHERE title = 'Rascunho Observabilidade');
+
+-- =============================================================================
+-- 7b. Aula blocks (content for each seeded aula)
+-- =============================================================================
+
+-- Introdução ao Quarkus — markdown aulas 0-1
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, markdown_body, created_at, updated_at)
+SELECT i.id, 0, 'MARKDOWN', item.body, NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id
+JOIN (
+    VALUES
+        (0, E'# Bem-vindo\n\nPrimeira **aula** do curso. Conclua para liberar a próxima.'),
+        (1, E'# Setup\n\nConfigure o ambiente Quarkus e o banco PostgreSQL.')
+) AS item(sort_order, body) ON item.sort_order = i.sort_order
+WHERE c.title = 'Introdução ao Quarkus'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- Introdução ao Quarkus — image aula 2
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, resource_id, created_at, updated_at)
+SELECT i.id, 0, 'IMAGE', r.id, NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id AND i.sort_order = 2
+JOIN tb_course_resources r ON r.filename = 'seed-aula.png'
+WHERE c.title = 'Introdução ao Quarkus'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- Introdução ao Quarkus — link aula 3
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, link_url, link_description, created_at, updated_at)
+SELECT i.id, 0, 'LINK', 'https://quarkus.io/guides/', 'Guia oficial Quarkus (abre em nova aba).', NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id AND i.sort_order = 3
+WHERE c.title = 'Introdução ao Quarkus'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- Introdução ao Quarkus — video aula 4
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, resource_id, created_at, updated_at)
+SELECT i.id, 0, 'VIDEO', r.id, NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id AND i.sort_order = 4
+JOIN tb_course_resources r ON r.filename = 'demo-clip.mp4'
+WHERE c.title = 'Introdução ao Quarkus'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- Angular na prática
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, markdown_body, created_at, updated_at)
+SELECT i.id, 0, 'MARKDOWN', item.body, NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id
+JOIN (
+    VALUES
+        (0, E'# Angular\n\nComponentes, rotas e Material.'),
+        (1, E'# HTTP\n\nUse `HttpClient` com interceptors JWT.'),
+        (2, E'# Forms\n\nReactive forms e Material form fields.')
+) AS item(sort_order, body) ON item.sort_order = i.sort_order
+WHERE c.title = 'Angular na prática'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- Rascunho Angular
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, markdown_body, created_at, updated_at)
+SELECT i.id, 0, 'MARKDOWN', E'# Outline\n\n- Signals\n- SSR\n- Testes', NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id AND i.sort_order = 0
+WHERE c.title = 'Rascunho Angular'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- PostgreSQL na prática — markdown
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, markdown_body, created_at, updated_at)
+SELECT i.id, 0, 'MARKDOWN', item.body, NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id
+JOIN (
+    VALUES
+        (0, E'# Modelagem\n\nChaves, FKs e normalização.'),
+        (1, E'# Performance\n\nQuando criar índices e como ler EXPLAIN.'),
+        (2, E'# JSONB\n\nConsultas e Flyway em ambientes de desenvolvimento.')
+) AS item(sort_order, body) ON item.sort_order = i.sort_order
+WHERE c.title = 'PostgreSQL na prática'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- PostgreSQL na prática — link
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, link_url, link_description, created_at, updated_at)
+SELECT i.id, 0, 'LINK', 'https://www.postgresql.org/docs/current/', 'Docs oficiais PostgreSQL.', NOW(), NOW()
+FROM tb_courses c
+JOIN tb_course_items i ON i.course_id = c.id AND i.sort_order = 3
+WHERE c.title = 'PostgreSQL na prática'
+  AND NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
+
+-- Any remaining items without blocks get a placeholder markdown block
+INSERT INTO tb_aula_blocks (course_item_id, sort_order, block_type, markdown_body, created_at, updated_at)
+SELECT i.id, 0, 'MARKDOWN', E'# ' || i.title, NOW(), NOW()
+FROM tb_course_items i
+WHERE NOT EXISTS (SELECT 1 FROM tb_aula_blocks b WHERE b.course_item_id = i.id);
 
 -- =============================================================================
 -- 8. Enrollments — Quarkus (cto-boss teacher roster)

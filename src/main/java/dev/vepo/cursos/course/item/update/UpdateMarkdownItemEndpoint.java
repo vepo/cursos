@@ -19,7 +19,7 @@ import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
-@Path("/courses/{courseId}/items/{itemId}")
+@Path("/courses/{courseId}/items/{itemId}/markdown")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -39,6 +39,7 @@ public class UpdateMarkdownItemEndpoint {
     @Authenticated
     @Operation(operationId = "updateMarkdownItem")
     public CourseItemResponse update(@PathParam("courseId") long courseId, @PathParam("itemId") long itemId, @Valid UpdateMarkdownItemRequest request) {
-        return CourseItemResponse.load(courseService.updateMarkdownItem(itemId, request.title(), request.markdownBody(), currentPassportUser.require()));
+        courseService.requireItemOfCourse(courseId, itemId);
+        return courseService.toItemResponse(courseService.updateMarkdownItem(itemId, request.title(), request.markdownBody(), currentPassportUser.require()));
     }
 }

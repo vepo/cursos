@@ -42,10 +42,10 @@ public class UpdateLinkItemEndpoint {
                                      @PathParam("itemId") long itemId,
                                      @Valid UpdateLinkItemRequest request) {
         courseService.requireItemOfCourse(courseId, itemId);
-        return CourseItemResponse.load(courseService.updateLinkItem(itemId,
-                                                                    request.title(),
-                                                                    request.linkUrl(),
-                                                                    request.linkDescription(),
-                                                                    currentPassportUser.require()));
+        return courseService.toItemResponse(courseService.updateLinkItem(itemId,
+                                                                         request.title(),
+                                                                         request.linkUrl(),
+                                                                         request.linkDescription(),
+                                                                         currentPassportUser.require()));
     }
 }

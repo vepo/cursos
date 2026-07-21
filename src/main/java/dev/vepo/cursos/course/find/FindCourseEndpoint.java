@@ -70,7 +70,7 @@ public class FindCourseEndpoint {
                                                   course.getTeacherPassportUserId(),
                                                   course.getTeacherUsername(),
                                                   course.getTeacherName());
-        var items = courseService.listItems(courseId).stream().map(CourseItemResponse::load).toList();
+        var items = courseService.listItems(courseId).stream().map(courseService::toItemResponse).toList();
         return new CourseDetailResponse(CourseResponse.load(course, author, courseImageAssetService.signedUrlOrNull(course)),
                                         items,
                                         teacher,

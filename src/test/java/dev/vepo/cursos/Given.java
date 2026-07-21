@@ -8,10 +8,12 @@ import java.util.Set;
 
 import dev.vepo.cursos.category.Category;
 import dev.vepo.cursos.category.CategoryRepository;
+import dev.vepo.cursos.course.AulaBlock;
+import dev.vepo.cursos.course.AulaBlockRepository;
+import dev.vepo.cursos.course.AulaBlockType;
 import dev.vepo.cursos.course.Course;
 import dev.vepo.cursos.course.CourseItem;
 import dev.vepo.cursos.course.CourseItemRepository;
-import dev.vepo.cursos.course.CourseItemType;
 import dev.vepo.cursos.course.CourseRepository;
 import dev.vepo.cursos.course.CourseStatus;
 import dev.vepo.cursos.enrollment.Enrollment;
@@ -83,9 +85,12 @@ public final class Given {
     public static CourseItem markdownItem(Course course, String title, String body) {
         return withTransaction(() -> {
             var order = inject(CourseItemRepository.class).countByCourse(course.getId());
-            var item = new CourseItem(inject(CourseRepository.class).findById(course.getId()).orElseThrow(), title, CourseItemType.MARKDOWN, order);
-            item.updateMarkdown(body);
-            return inject(CourseItemRepository.class).save(item);
+            var persistedCourse = inject(CourseRepository.class).findById(course.getId()).orElseThrow();
+            var item = inject(CourseItemRepository.class).save(new CourseItem(persistedCourse, title, order));
+            var block = new AulaBlock(item, AulaBlockType.MARKDOWN, 0);
+            block.updateMarkdown(body);
+            inject(AulaBlockRepository.class).save(block);
+            return item;
         });
     }
 
