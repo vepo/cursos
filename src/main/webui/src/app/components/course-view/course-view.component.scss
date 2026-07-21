@@ -333,11 +333,42 @@
 :host ::ng-deep .markdown pre.course-mermaid {
   overflow-x: auto;
   max-width: 100%;
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e2e8f0);
 }
 
 :host ::ng-deep .markdown pre.course-mermaid svg {
   max-width: 100%;
   height: auto;
+}
+
+/* Belt-and-suspenders: Mermaid dark-theme leftovers vs light study surface */
+:host ::ng-deep .markdown pre.course-mermaid .relationshipLine {
+  stroke: var(--color-text, #0f172a) !important;
+  stroke-width: 1.75px !important;
+}
+
+:host ::ng-deep .markdown pre.course-mermaid .marker,
+:host ::ng-deep .markdown pre.course-mermaid .marker path {
+  stroke: var(--color-text, #0f172a) !important;
+}
+
+:host ::ng-deep .markdown pre.course-mermaid .marker circle {
+  fill: var(--color-surface, #fff) !important;
+  stroke: var(--color-text, #0f172a) !important;
+}
+
+:host ::ng-deep .markdown pre.course-mermaid .edgeLabel,
+:host ::ng-deep .markdown pre.course-mermaid .edgeLabel p,
+:host ::ng-deep .markdown pre.course-mermaid .labelBkg {
+  color: var(--color-text, #0f172a) !important;
+  background-color: var(--color-surface, #fff) !important;
+  opacity: 1 !important;
+}
+
+:host ::ng-deep .markdown pre.course-mermaid .nodeLabel,
+:host ::ng-deep .markdown pre.course-mermaid .nodeLabel p {
+  color: var(--color-text, #0f172a) !important;
 }
 
 :host ::ng-deep .markdown pre.course-mermaid-error {

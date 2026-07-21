@@ -5,6 +5,48 @@ type MermaidApi = {
   run: (options: { nodes: HTMLElement[] }) => Promise<void>;
 };
 
+/**
+ * Learn study/preview content is a light surface (`--color-main-bg`).
+ * Mermaid `dark` draws lightgrey relationship lines that vanish on that background.
+ */
+export const COURSE_MERMAID_INIT: Record<string, unknown> = {
+  startOnLoad: false,
+  theme: 'base',
+  securityLevel: 'strict',
+  themeVariables: {
+    darkMode: false,
+    background: '#F8FAFC',
+    primaryColor: '#FFFFFF',
+    primaryTextColor: '#0F172A',
+    primaryBorderColor: '#0D9488',
+    secondaryColor: '#E2E8F0',
+    tertiaryColor: '#F8FAFC',
+    lineColor: '#0F172A',
+    textColor: '#0F172A',
+    mainBkg: '#FFFFFF',
+    nodeBorder: '#0F172A',
+    clusterBkg: '#F8FAFC',
+    titleColor: '#0F172A',
+    edgeLabelBackground: '#FFFFFF',
+    fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+    fontSize: '14px'
+  },
+  themeCSS: `
+    .relationshipLine { stroke: #0F172A !important; stroke-width: 1.75px !important; fill: none !important; }
+    .marker { stroke: #0F172A !important; fill: none !important; }
+    .marker path { stroke: #0F172A !important; fill: none !important; }
+    .marker circle { fill: #FFFFFF !important; stroke: #0F172A !important; }
+    .entityBox, .node rect.basic, .node .label-container { fill: #FFFFFF !important; stroke: #0F172A !important; stroke-width: 1.5px !important; }
+    .edgeLabel, .edgeLabel p, .labelBkg, .relationshipLabelBox {
+      color: #0F172A !important;
+      background-color: #FFFFFF !important;
+      opacity: 1 !important;
+    }
+    .edgeLabel .label text { fill: #0F172A !important; }
+    .nodeLabel, .nodeLabel p, .markdown-node-label, .markdown-node-label p { color: #0F172A !important; }
+  `
+};
+
 let mermaidPromise: Promise<MermaidApi> | null = null;
 let mermaidInitialized = false;
 
@@ -14,11 +56,7 @@ async function loadMermaid(): Promise<MermaidApi> {
   }
   const mermaid = await mermaidPromise;
   if (!mermaidInitialized) {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: 'dark',
-      securityLevel: 'strict'
-    });
+    mermaid.initialize(COURSE_MERMAID_INIT);
     mermaidInitialized = true;
   }
   return mermaid;
