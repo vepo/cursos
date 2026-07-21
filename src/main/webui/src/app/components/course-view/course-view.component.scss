@@ -360,7 +360,8 @@
 
 :host ::ng-deep .markdown pre.course-mermaid .edgeLabel,
 :host ::ng-deep .markdown pre.course-mermaid .edgeLabel p,
-:host ::ng-deep .markdown pre.course-mermaid .labelBkg {
+:host ::ng-deep .markdown pre.course-mermaid .labelBkg,
+:host ::ng-deep .markdown pre.course-mermaid .relationshipLabelBox {
   color: var(--color-text, #0f172a) !important;
   background-color: var(--color-surface, #fff) !important;
   opacity: 1 !important;

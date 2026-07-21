@@ -1,5 +1,6 @@
 import { renderCourseMarkdown } from './course-markdown';
 import {
+  COURSE_MERMAID_INIT,
   hydrateCourseMermaid,
   pendingMermaidNodes,
   resetCourseMermaidForTests
@@ -40,6 +41,14 @@ describe('course-mermaid', () => {
 
     expect(root.querySelector('svg')).not.toBeNull();
     expect(pendingMermaidNodes(root).length).toBe(0);
+  });
+
+  it('shouldUseHighContrastInitForLightShell', () => {
+    expect(COURSE_MERMAID_INIT.theme).toBe('base');
+    expect(COURSE_MERMAID_INIT.themeVariables.lineColor).toBe('#0F172A');
+    expect(COURSE_MERMAID_INIT.themeVariables.edgeLabelBackground).toBe('#FFFFFF');
+    expect(COURSE_MERMAID_INIT.themeVariables.darkMode).toBe(false);
+    expect(COURSE_MERMAID_INIT.themeCSS).toContain('.relationshipLine');
   });
 
   it('shouldShowErrorAndKeepSourceForInvalidDiagram', async () => {

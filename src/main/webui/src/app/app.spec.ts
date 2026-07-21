@@ -452,7 +452,8 @@ describe('Icon menu panel (T23)', () => {
 
     const widthPx = Number.parseFloat(style.width);
     const viewport = window.innerWidth || document.documentElement.clientWidth;
-    if (viewport <= 750) {
+    const mobileDrawer = window.matchMedia('(max-width: 750px)').matches;
+    if (mobileDrawer) {
       expect(widthPx)
         .withContext('mobile: full-width drawer')
         .toBeGreaterThanOrEqual(viewport * 0.9);

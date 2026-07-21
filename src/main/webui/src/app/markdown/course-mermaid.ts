@@ -5,11 +5,8 @@ type MermaidApi = {
   run: (options: { nodes: HTMLElement[] }) => Promise<void>;
 };
 
-/**
- * Learn study/preview content is a light surface (`--color-main-bg`).
- * Mermaid `dark` draws lightgrey relationship lines that vanish on that background.
- */
-export const COURSE_MERMAID_INIT: Record<string, unknown> = {
+/** Learn content area is light — avoid Mermaid `dark` (lightgrey lines vanish on #F8FAFC). */
+export const COURSE_MERMAID_INIT = {
   startOnLoad: false,
   theme: 'base',
   securityLevel: 'strict',
@@ -20,32 +17,31 @@ export const COURSE_MERMAID_INIT: Record<string, unknown> = {
     primaryTextColor: '#0F172A',
     primaryBorderColor: '#0D9488',
     secondaryColor: '#E2E8F0',
+    secondaryTextColor: '#0F172A',
     tertiaryColor: '#F8FAFC',
+    tertiaryTextColor: '#0F172A',
     lineColor: '#0F172A',
     textColor: '#0F172A',
     mainBkg: '#FFFFFF',
     nodeBorder: '#0F172A',
-    clusterBkg: '#F8FAFC',
-    titleColor: '#0F172A',
+    nodeTextColor: '#0F172A',
+    defaultLinkColor: '#0F172A',
     edgeLabelBackground: '#FFFFFF',
+    titleColor: '#0F172A',
     fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-    fontSize: '14px'
+    fontSize: '16px'
   },
   themeCSS: `
-    .relationshipLine { stroke: #0F172A !important; stroke-width: 1.75px !important; fill: none !important; }
+    .relationshipLine { stroke: #0F172A !important; stroke-width: 1.75px !important; }
     .marker { stroke: #0F172A !important; fill: none !important; }
     .marker path { stroke: #0F172A !important; fill: none !important; }
-    .marker circle { fill: #FFFFFF !important; stroke: #0F172A !important; }
-    .entityBox, .node rect.basic, .node .label-container { fill: #FFFFFF !important; stroke: #0F172A !important; stroke-width: 1.5px !important; }
-    .edgeLabel, .edgeLabel p, .labelBkg, .relationshipLabelBox {
-      color: #0F172A !important;
-      background-color: #FFFFFF !important;
-      opacity: 1 !important;
-    }
-    .edgeLabel .label text { fill: #0F172A !important; }
-    .nodeLabel, .nodeLabel p, .markdown-node-label, .markdown-node-label p { color: #0F172A !important; }
+    .marker circle { stroke: #0F172A !important; fill: #FFFFFF !important; }
+    .entityBox, .node rect, .node .label-container { fill: #FFFFFF !important; stroke: #0F172A !important; stroke-width: 1.5px !important; }
+    .edgeLabel, .edgeLabel p, .labelBkg, .relationshipLabelBox { color: #0F172A !important; background-color: #FFFFFF !important; opacity: 1 !important; }
+    .edgeLabel .label text, .label { fill: #0F172A !important; color: #0F172A !important; }
+    .nodeLabel, .nodeLabel p { color: #0F172A !important; }
   `
-};
+} as const;
 
 let mermaidPromise: Promise<MermaidApi> | null = null;
 let mermaidInitialized = false;
@@ -56,7 +52,7 @@ async function loadMermaid(): Promise<MermaidApi> {
   }
   const mermaid = await mermaidPromise;
   if (!mermaidInitialized) {
-    mermaid.initialize(COURSE_MERMAID_INIT);
+    mermaid.initialize({ ...COURSE_MERMAID_INIT });
     mermaidInitialized = true;
   }
   return mermaid;

@@ -124,7 +124,7 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Block order** | Zero-based position of blocks within an aula. | `AulaBlock.sortOrder` |
 | **Markdown block** | Aula block storing rich text; may reference gallery assets. | `AulaBlockType.MARKDOWN` |
 | **Study markdown** | Sanitized HTML rendered from Markdown in the student study view (and teacher live preview) via [Marked](https://marked.js.org/) + DOMPurify. Supports CommonMark/GFM constructs; fenced Mermaid diagrams via [Mermaid](https://mermaid.js.org/) (hydrated after sanitize); `course-asset:` images via signed URLs; raw HTML stripped; external images rejected. | `src/app/markdown/course-markdown.ts`, `course-mermaid.ts` |
-| **Mermaid diagram** | Course markdown fenced block language `mermaid`, rendered as SVG in study and teacher preview. | All Mermaid diagram types; `securityLevel: 'strict'`; theme dark; invalid source shows error + keeps text |
+| **Mermaid diagram** | Course markdown fenced block language `mermaid`, rendered as SVG in study and teacher preview. | All Mermaid diagram types; `securityLevel: 'strict'`; theme `base` + high-contrast Learn tokens; invalid source shows error + keeps text |
 | **Image block** | Aula block storing binary image in `tb_course_resources`. | `AulaBlockType.IMAGE` |
 | **Video block** | Aula block storing binary video in PostgreSQL. | `AulaBlockType.VIDEO`; seekable via **Playback ticket** |
 | **Link block** | Aula block with an external HTTPS URL and optional description. | `AulaBlockType.LINK`; UI **Abrir recurso** |

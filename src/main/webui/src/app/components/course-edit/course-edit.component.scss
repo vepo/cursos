@@ -199,11 +199,43 @@
   .markdown pre.course-mermaid {
     overflow-x: auto;
     max-width: 100%;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
   }
 
   .markdown pre.course-mermaid svg {
     max-width: 100%;
     height: auto;
+  }
+
+  .markdown pre.course-mermaid .relationshipLine {
+    stroke: var(--color-text) !important;
+    stroke-width: 1.75px !important;
+  }
+
+  .markdown pre.course-mermaid .marker,
+  .markdown pre.course-mermaid .marker path {
+    stroke: var(--color-text) !important;
+    fill: none !important;
+  }
+
+  .markdown pre.course-mermaid .marker circle {
+    stroke: var(--color-text) !important;
+    fill: var(--color-surface) !important;
+  }
+
+  .markdown pre.course-mermaid .edgeLabel,
+  .markdown pre.course-mermaid .edgeLabel p,
+  .markdown pre.course-mermaid .labelBkg,
+  .markdown pre.course-mermaid .relationshipLabelBox {
+    color: var(--color-text) !important;
+    background-color: var(--color-surface) !important;
+    opacity: 1 !important;
+  }
+
+  .markdown pre.course-mermaid .nodeLabel,
+  .markdown pre.course-mermaid .nodeLabel p {
+    color: var(--color-text) !important;
   }
 
   .markdown pre.course-mermaid-error {

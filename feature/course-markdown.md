@@ -63,7 +63,7 @@ No markdown pane until after create (unchanged). Full-width shell (prior layout 
 - Bundle size: `marked` + `dompurify` (acceptable for SPA).
 - **Mermaid** is a large dependency and historically had XSS vectors — pin a current version, `securityLevel: 'strict'`, never pass unsanitized HTML into Mermaid; render from fenced **text** only.
 - Async diagram paint after `innerHTML` — must re-run on aula/preview body changes without leaking listeners.
-- Wide diagrams (ER) need horizontal scroll; dark shell theme tokens for Mermaid.
+- Wide diagrams (ER) need horizontal scroll; Mermaid must use high-contrast colors on the light main content area (not Mermaid `dark`).
 
 ### Feature questions (FQ)
 
@@ -84,7 +84,7 @@ No markdown pane until after create (unchanged). Full-width shell (prior layout 
 | **AQ3** | Package placement? | answered | Shared pure module `src/app/markdown/course-markdown.ts` (+ specs); both `course-view` and `course-edit` call it. Delete/replace `course-view/course-markdown.renderer.ts`. |
 | **AQ4** | How to integrate Mermaid with sync `renderCourseMarkdown` → `innerHTML`? | answered | **Placeholder + `mermaid.run()`**: Marked code renderer emits `<pre class="course-mermaid">` with escaped source; after Angular binds `innerHTML`, call `hydrateCourseMermaid(root)` |
 | **AQ5** | Load Mermaid eagerly or dynamic `import('mermaid')` on first fence? | answered | **Dynamic** `import('mermaid')` on first hydration (smaller initial bundle) |
-| **AQ6** | Theme: Mermaid `dark` / `neutral` vs CSS variables matching Learn shell? | answered | Mermaid theme **`dark`**, aligned with Learn dark shell |
+| **AQ6** | Theme: Mermaid `dark` / `neutral` vs CSS variables matching Learn shell? | answered | **`base` + Learn light content tokens** (`lineColor`/`text` `#0F172A`, white edge-label bg); CSS overrides for ER lines/labels (revised 2026-07-20 — `dark` made lines/labels unreadable on light main) |
 
 ## Architecture
 
@@ -103,7 +103,7 @@ hydrateCourseMermaid(root) → dynamic import('mermaid') → mermaid.run → SVG
 | Module | Role |
 |--------|------|
 | `app/markdown/course-markdown.ts` | Sync HTML; custom Marked `code` renderer for `lang === 'mermaid'` → `.course-mermaid` placeholder |
-| `app/markdown/course-mermaid.ts` | `hydrateCourseMermaid(root)` — lazy init Mermaid once (`theme: 'dark'`, `securityLevel: 'strict'`), run on placeholders, error → `.course-mermaid-error` + source |
+| `app/markdown/course-mermaid.ts` | `hydrateCourseMermaid(root)` — lazy init once (`theme: 'base'` + high-contrast `themeVariables`/`themeCSS`, `securityLevel: 'strict'`); error → `.course-mermaid-error` + source |
 | `course-view` / `course-edit` | After setting markdown HTML, call hydrate (preview: after each body change; study: after aula load) |
 
 No Endpoint/Service/Repository changes. **No Flyway** (Angular-only).
@@ -117,7 +117,7 @@ No Endpoint/Service/Repository changes. **No Flyway** (Angular-only).
 3. Links: allow only `http:`/`https:` (Marked `cleanUrl` + DOMPurify).
 4. Always `DOMPurify.sanitize(html, { … })` with a tight allowlist; allow `pre`/`code` with `class` for `.course-mermaid`.
 5. **v2:** fenced ```mermaid → `<pre class="course-mermaid">` + escaped source text. After bind, `hydrateCourseMermaid` replaces with SVG. On parse/render failure: container gets error class/message and retains source (**FQ5**). Non-mermaid fences stay normal `<pre><code>`.
-6. CSS: `.course-mermaid` / SVG wrapper `overflow-x: auto` for wide ER diagrams; theme dark.
+6. CSS: `.course-mermaid` / SVG wrapper `overflow-x: auto`; high-contrast ER lines/labels (`theme: base` + shell CSS overrides).
 
 ### Teacher editor
 
@@ -153,7 +153,7 @@ No Endpoint/Service/Repository changes. **No Flyway** (Angular-only).
 | **FC9** | Non-mermaid fenced code unchanged; XSS still blocked | Security | ☑ |
 | **FC10** | Invalid diagram shows error + source; page stays usable | FQ5 | ☑ |
 | **FC11** | Domain / feature-catalog / ui gallery / ARCHITECTURE document Mermaid | Docs | ☑ |
-| **FC12** | Mermaid loaded via dynamic import; theme dark + securityLevel strict | AQ5, AQ6 | ☑ |
+| **FC12** | Mermaid loaded via dynamic import; high-contrast base theme + securityLevel strict | AQ5, AQ6 | ☑ |
 | **FCdev2** | Dev: paste sample erDiagram, preview + study match | Dev experience | ☑ |
 
 #### Tasks
@@ -180,7 +180,7 @@ No Endpoint/Service/Repository changes. **No Flyway** (Angular-only).
 #### Implementation notes
 
 - `course-markdown.ts` emits `<pre class="course-mermaid">` for language `mermaid`.
-- `course-mermaid.ts` + `CourseMermaidDirective` hydrate after bind (dynamic import; theme `dark`; `securityLevel: 'strict'`).
+- `course-mermaid.ts` + `CourseMermaidDirective` hydrate after bind (dynamic import; theme `base` + Learn light contrast; `securityLevel: 'strict'`).
 - Invalid diagrams (including Mermaid error SVG) → `.course-mermaid-error` + restored source.
 - Specs: markdown/mermaid 23/23; course-edit/view 49/49; `npm run build` green.
 
