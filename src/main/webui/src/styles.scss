@@ -219,6 +219,22 @@ button:focus-visible {
   background: var(--color-surface);
 }
 
+.app-shell-sidebar .btn-quiet {
+  color: var(--color-on-chrome);
+  border-color: color-mix(in srgb, var(--color-on-chrome) 28%, transparent);
+}
+
+.app-shell-sidebar .btn-quiet:hover {
+  color: var(--color-on-chrome);
+  background: color-mix(in srgb, var(--color-on-chrome) 8%, transparent);
+}
+
+.app-shell-sidebar .btn-quiet:disabled {
+  color: color-mix(in srgb, var(--color-on-chrome) 40%, transparent);
+  border-color: color-mix(in srgb, var(--color-on-chrome) 16%, transparent);
+  cursor: not-allowed;
+}
+
 .btn-danger {
   display: inline-flex;
   align-items: center;

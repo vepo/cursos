@@ -1,6 +1,6 @@
 # UI visual shell
 
-**Feature version:** 2  
+**Feature version:** 3  
 **Status:** done  
 **Requested:** 2026-07-18
 
@@ -256,3 +256,100 @@ Angular unit tests for shell and page layout regions; keep `data-testid` contrac
 **Development approval:** approved 2026-07-18 — tasks: T37, T38 (plan implementation)
 
 **Implementation notes:** `100dvh` column shell; Conta section holds Minha conta + Sair + display name; footer OpenAPI link.
+
+### 2026-07-21 — Menu layout: Sair last + contrast
+
+**Status:** done
+
+**Description:** Fix navigation drawer ordering and chrome contrast. **Sair** must be the last interactive option (Conta group after Admin). Style **Sair** with danger color distinct from nav links. Ensure the header **menu icon** uses `--color-on-chrome` so it contrasts on the ink header. Fix **+ Nova aula** (and other `.btn-quiet` controls on the ink sidebar) so they use chrome-readable colors instead of muted/page tokens.
+
+**Impact on other features:** Shell menu (`app.*`); course editor sidebar (`course-edit` + shared `.app-shell-sidebar .btn-quiet` in `styles.scss`); docs for Conta order, logout, and chrome quiet-button contrast. No API/schema.
+
+#### Wireframe (menu open)
+
+```
+│ … [☰] │
+│       ┌──────────────────────┐
+│       │ APRENDER             │
+│       │  ├ Catálogo          │
+│       │  └ Meus cursos       │
+│       │ ENSINAR              │
+│       │  ├ Meus cursos       │
+│       │  └ Novo curso        │
+│       │ ADMIN (if allowed)   │
+│       │  └ Categorias        │
+│       │ CONTA                │
+│       │  ├ Minha conta       │
+│       │  └ Sair  (danger)    │
+│       │  display name        │
+│       └──────────────────────┘
+```
+
+☰ uses `--color-on-chrome` on `--color-header`.
+
+#### Wireframe (course edit sidebar)
+
+```
+┌─────────────────────┬──────────────────────┐
+│ Aulas  [+ Nova aula]│  Editar curso …      │
+│ (on-chrome quiet)   │                      │
+│ Detalhes…           │                      │
+│ aula list…          │                      │
+└─────────────────────┴──────────────────────┘
+```
+
+#### Feature questions (FQ)
+
+| ID | Question | Status | Answer |
+|----|----------|--------|--------|
+| **FQ6** | Should Conta always be the last group (after Admin when present)? | answered | Yes — Sair is the last interactive option. |
+| **FQ7** | Logout color token? | answered | Danger (`--color-danger` / `.nav-menu-drawer__logout`), distinct from nav links. |
+| **FQ8** | How to fix **+ Nova aula** contrast on ink sidebar? | answered | Scope `.btn-quiet` (and related quiet chrome actions) under `.app-shell-sidebar` to `--color-on-chrome` / chrome borders — not page muted tokens. Opened by user report 2026-07-21. |
+
+#### Architecture questions (AQ)
+
+| ID | Question | Status | Answer |
+|----|----------|--------|--------|
+| **AQ6** | Implementation surface? | answered | Reorder `navigationGroups` in `app.ts`; CSS in `app.scss` for logout + toggle; shared sidebar quiet-button rule in `styles.scss` (FQ8); specs in `app.spec.ts` + `course-edit.component.spec.ts`; no new packages/API. |
+
+#### Architecture
+
+| Area | Design |
+|------|--------|
+| Packages | Frontend shell — `app.{ts,html,scss,spec.ts}`; shared tokens/classes in `styles.scss`; course editor sidebar contrast via `.app-shell-sidebar .btn-quiet` |
+| Layers | N/A (Angular shell / CSS) |
+| API | None |
+| Schema | None |
+| Tests | `app.spec.ts`: Conta after Admin; Sair last interactive; logout danger color; menu toggle/icon on-chrome. `course-edit.component.spec.ts`: `+ Nova aula` / sidebar `.btn-quiet` uses on-chrome (or readable chrome mix) |
+
+#### Feature checklist
+
+| ID | Criterion | Source | Done |
+|----|-----------|--------|------|
+| FC13 | Conta is last nav group; Admin (when present) precedes Conta | FQ6 | ☑ |
+| FC14 | Sair is last interactive control in the drawer | FQ6 | ☑ |
+| FC15 | Sair uses danger color distinct from other menu links | FQ7 | ☑ |
+| FC16 | Menu icon/toggle visible on header (`--color-on-chrome`) | bug report | ☑ |
+| FC17 | Domain / gallery / feature-catalog note Conta order and logout styling | Impact | ☑ |
+| FC18 | **+ Nova aula** (sidebar `.btn-quiet`) readable on ink sidebar | FQ8 | ☑ |
+| FC19 | Gallery documents chrome quiet button on sidebar | FQ8 | ☑ |
+
+#### Tasks
+
+| ID | Task | Covers | Done |
+|----|------|--------|------|
+| T39 | Reorder Conta after Admin; style Sair (danger), menu toggle contrast, sidebar `.btn-quiet` chrome contrast | FC13–FC16, FC18 | ☑ |
+| T40 | Specs for order, logout color, icon + Nova aula contrast; sync docs/gallery | FC13–FC19 | ☑ |
+
+#### Test coverage
+
+| ID | Test | Covers | Done |
+|----|------|--------|------|
+| TC9 | Conta group follows Admin when admin role present; Sair last interactive in drawer | T39 | ☑ |
+| TC10 | Logout computed color matches danger token; menu toggle/icon matches on-chrome | T39 | ☑ |
+| TC11 | Course edit `data-testid="new-item"` / sidebar quiet button contrasts with sidebar bg | T39 | ☑ |
+| TC12 | Docs/gallery updated; Angular specs green | T40 | ☑ |
+
+**Development approval:** approved 2026-07-21 — tasks: T39, T40
+
+**Implementation notes:** Conta moved after Admin in `navigationGroups`. Sair uses `--color-danger`. Menu toggle inherits `--color-on-chrome`. `.app-shell-sidebar .btn-quiet` uses on-chrome for **+ Nova aula**. Specs in `app.spec.ts` and `course-edit.component.spec.ts`. Docs: domain-spec, feature-catalog, ui-elements-gallery. `npm test` (34) + `npm run build` green.

@@ -12,7 +12,7 @@ One markdown file per **high-level capability**: `feature/<feature-slug>.md` (ke
 | Student study experience & teacher area | [student-study-experience.md](student-study-experience.md) | done |
 | Course markdown (Marked) | [course-markdown.md](course-markdown.md) | done (v1 + Mermaid v2) |
 | Composite aula | [composite-aula.md](composite-aula.md) | in-progress |
-| UI visual shell | [ui-visual-shell.md](ui-visual-shell.md) | done (superseded palette by Learn) |
+| UI visual shell | [ui-visual-shell.md](ui-visual-shell.md) | done (menu Sair order + contrast v3) |
 | Learn productization | [learn-productization.md](learn-productization.md) | done |
 | Account settings | [account-settings.md](account-settings.md) | done |
 | Course authoring UX | [course-authoring-ux.md](course-authoring-ux.md) | done |

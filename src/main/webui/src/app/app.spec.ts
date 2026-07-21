@@ -368,6 +368,62 @@ describe('Icon menu panel (T23)', () => {
     expect(leaves.map(href)).toEqual(['/admin/categories']);
   });
 
+  it('shouldPlaceContaAfterAdminAndSairAsLastInteractiveWhenAdminPresent', async () => {
+    const fixture = await createApp(['cursos.admin']);
+    const { panel } = openMenuPanel(fixture);
+
+    const groups = Array.from(
+      panel.querySelectorAll('[data-menu-group]')
+    ) as HTMLElement[];
+    const groupLabels = groups.map(group => group.getAttribute('data-menu-group') ?? '');
+    expect(groupLabels)
+      .withContext('Conta is last nav group; Admin precedes Conta')
+      .toEqual(['Aprender', 'Ensinar', 'Admin', 'Conta']);
+
+    const interactives = Array.from(
+      panel.querySelectorAll('a, button')
+    ) as HTMLElement[];
+    expect(interactives.length).withContext('drawer has interactive controls').toBeGreaterThan(0);
+    const last = interactives[interactives.length - 1];
+    expect(last.getAttribute('data-testid'))
+      .withContext('Sair is last interactive option in the drawer')
+      .toBe('menu-logout');
+  });
+
+  it('shouldStyleSairWithDangerColorAndMenuToggleWithOnChrome', async () => {
+    const fixture = await createApp(['cursos.admin']);
+    const root = fixture.nativeElement as HTMLElement;
+    const toggle = menuToggle(root);
+    expect(toggle).withContext('menu toggle').not.toBeNull();
+    if (!toggle) {
+      return;
+    }
+
+    const toggleColor = getComputedStyle(toggle).color;
+    const icon = toggle.querySelector('mat-icon, .mat-icon') as HTMLElement | null;
+    const iconColor = icon ? getComputedStyle(icon).color : toggleColor;
+    const onChrome = VISUAL_SHELL_TOKENS['--color-on-chrome'];
+    expect(
+      cssColorEquals(toggleColor, onChrome) || cssColorEquals(iconColor, onChrome)
+    )
+      .withContext(
+        `menu toggle/icon must use --color-on-chrome (got toggle=${toggleColor}, icon=${iconColor})`
+      )
+      .toBeTrue();
+
+    const { panel } = openMenuPanel(fixture);
+    const logout = panel.querySelector('[data-testid="menu-logout"]') as HTMLElement | null;
+    expect(logout).withContext('Sair control').not.toBeNull();
+    if (!logout) {
+      return;
+    }
+
+    const logoutColor = getComputedStyle(logout).color;
+    expect(cssColorEquals(logoutColor, VISUAL_SHELL_TOKENS['--color-danger']))
+      .withContext(`Sair must use --color-danger (got ${logoutColor})`)
+      .toBeTrue();
+  });
+
   it('shouldHideAdminGroupInsidePanelWhenJwtOmitsCursosAdmin', async () => {
     const fixture = await createApp([]);
     const { panel } = openMenuPanel(fixture);

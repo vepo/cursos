@@ -37,6 +37,12 @@
 
 .nav-menu-toggle {
   display: inline-flex;
+  color: var(--color-on-chrome);
+
+  mat-icon,
+  .mat-icon {
+    color: inherit;
+  }
 }
 
 .nav-menu-drawer {
@@ -91,9 +97,17 @@
     cursor: pointer;
   }
 
-  a:hover,
-  .nav-menu-drawer__logout:hover {
+  a:hover {
     color: var(--color-link);
+  }
+
+  .nav-menu-drawer__logout {
+    color: var(--color-danger);
+  }
+
+  .nav-menu-drawer__logout:hover {
+    color: var(--color-danger);
+    text-decoration: underline;
   }
 
   .nav-menu-drawer__user {

@@ -56,16 +56,16 @@ export class AppComponent {
       ]
     },
     {
-      label: 'Conta',
-      items: [
-        { label: 'Minha conta', route: '/account' }
-      ]
-    },
-    {
       label: 'Admin',
       requiredRole: CURSOS_ADMIN_ROLE,
       items: [
         { label: 'Categorias', route: '/admin/categories' }
+      ]
+    },
+    {
+      label: 'Conta',
+      items: [
+        { label: 'Minha conta', route: '/account' }
       ]
     }
   ];

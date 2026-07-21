@@ -12,15 +12,17 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | App shell main | `.app-shell-main` | Primary content column |
 | Header | `.main-header`, `data-testid="visual-shell-header"` | Sticky top; brand + menu (auth) or Entrar |
 | Footer | `.main-footer`, `data-testid="visual-shell-footer"` | Sticky bottom; copyright + OpenAPI link |
-| Navigation drawer | `.nav-menu-drawer` | Right-anchored; Conta includes Minha conta + Sair |
-| Menu toggle | `data-testid="nav-menu-toggle"` | Last header control when authenticated |
+| Navigation drawer | `.nav-menu-drawer` | Right-anchored; groups Aprender → Ensinar → Admin (if allowed) → Conta; Conta = Minha conta + Sair (danger, last interactive) |
+| Menu toggle | `data-testid="nav-menu-toggle"` | Last header control when authenticated; `--color-on-chrome` on ink header |
+| Logout | `.nav-menu-drawer__logout`, `data-testid="menu-logout"` | **Sair**; danger color |
 
 ## Buttons
 
 | Element | Class | Use |
 |---------|-------|-----|
 | Primary | `.btn-primary` | Publish, save, enroll, Abrir recurso |
-| Quiet | `.btn-quiet` | Secondary actions |
+| Quiet | `.btn-quiet` | Secondary actions on light/main surfaces |
+| Quiet (chrome) | `.app-shell-sidebar .btn-quiet` | Secondary actions on ink sidebar (e.g. **+ Nova aula**); uses `--color-on-chrome` |
 | Danger | `.btn-danger` | Destructive icon actions |
 
 ## Status

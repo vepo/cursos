@@ -178,6 +178,35 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
       .toMatch(/Rascunho/i);
   });
 
+  it('shouldPaintNovaAulaQuietButtonWithOnChromeOnInkSidebar', () => {
+    const sidebar = fixture.nativeElement.querySelector(
+      '[data-testid="shell-sidebar"]'
+    ) as HTMLElement | null;
+    const novaAula = fixture.nativeElement.querySelector(
+      '[data-testid="new-item"]'
+    ) as HTMLElement | null;
+    expect(sidebar).withContext('course edit sidebar').not.toBeNull();
+    expect(novaAula).withContext('+ Nova aula control').not.toBeNull();
+    if (!sidebar || !novaAula) {
+      return;
+    }
+
+    expect(sidebar.classList.contains(VISUAL_SHELL_LAYOUT.sidebar)).toBeTrue();
+    expect(novaAula.classList.contains('btn-quiet')).toBeTrue();
+
+    const sidebarBg = getComputedStyle(sidebar).backgroundColor;
+    expect(cssColorEquals(sidebarBg, VISUAL_SHELL_TOKENS['--color-sidebar']))
+      .withContext(`sidebar background must be ink (--color-sidebar), got ${sidebarBg}`)
+      .toBeTrue();
+
+    const novaColor = getComputedStyle(novaAula).color;
+    expect(cssColorEquals(novaColor, VISUAL_SHELL_TOKENS['--color-on-chrome']))
+      .withContext(
+        `+ Nova aula must use --color-on-chrome on ink sidebar (got ${novaColor})`
+      )
+      .toBeTrue();
+  });
+
   it('shouldWarnWhenLeavingDirtyEditor', () => {
     const component = fixture.componentInstance;
     const confirmation = TestBed.inject(ConfirmationService) as jasmine.SpyObj<ConfirmationService>;

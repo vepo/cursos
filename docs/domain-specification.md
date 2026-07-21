@@ -97,12 +97,12 @@ Terms below are the **only** approved names for aggregates, entities, states, ac
 | **Footer** | Persistent bottom bar with product copyright and OpenAPI link. | Fixed with header; does not scroll away |
 | **Sidebar** | Left near-black region whose contents depend on the current screen. | Catalog categories, study aula tree, teaching-course list, or editor item list |
 | **Main** | Primary dark content region beside or below the contextual sidebar; the scrollable shell region. | Nested teacher/admin pages use this region without a second toolbar |
-| **Menu icon** | Top-right authenticated control that opens or closes the navigation drawer. | Closed by default; `aria-expanded` reflects state |
-| **Navigation menu** | Right-anchored drawer containing at most two navigation levels plus session actions. | Conta includes **Minha conta** and **Sair**; closes on toggle, leaf navigation, or Escape |
+| **Menu icon** | Top-right authenticated control that opens or closes the navigation drawer. | Closed by default; `aria-expanded` reflects state; `--color-on-chrome` on ink header for contrast |
+| **Navigation menu** | Right-anchored drawer containing at most two navigation levels plus session actions. | Group order: Aprender → Ensinar → Admin (if allowed) → Conta; Conta includes **Minha conta** and **Sair** (last interactive; danger color); closes on toggle, leaf navigation, or Escape |
 | **Confirmation dialog** | In-app Material dialog for destructive or discard confirmations. | Delete item, leave dirty editor, switch dirty selection |
 | **Aprender** | Navigation group for student learning entry points. | **Catálogo**, **Meus cursos** |
 | **Ensinar** | Navigation group for teacher authoring and course management. | **Meus cursos**, **Novo curso** |
-| **Conta** | Navigation group for account self-service and logout. | **Minha conta**, **Sair** |
+| **Conta** | Last navigation group for account self-service and logout. | **Minha conta**, then **Sair** (danger styling) |
 | **Minha conta** | Screen where the user views/edits own name, email, author description, and password. | Route `/account` |
 | **Admin** | Role-gated navigation group for platform administration. | Visible only to **Cursos admin**; **Categorias** |
 
@@ -395,12 +395,13 @@ erDiagram
 | Course finish screen | Curso concluído |
 | Download certificate | Baixar certificado |
 | Concluded enrollment | Concluído |
-| Navigation menu | Aprender / Ensinar / Admin |
+| Navigation menu | Aprender / Ensinar / Admin / Conta (Sair last) |
 | Visual shell | Dark application frame |
-| Header | Cursos / user / Sair / menu icon |
-| Sidebar | Categorias / Aulas / Meus cursos |
+| Header | Learn brand / menu icon |
+| Sidebar | Categorias / Aulas / Meus cursos (+ Nova aula on chrome) |
 | Main | Primary content area |
 | Menu icon | Abrir menu / Fechar menu |
+| Sair | Sair (danger) |
 | Hide comment | Ocultar comentário |
 | Restore comment | Restaurar comentário |
 | Course overview | Visão geral |

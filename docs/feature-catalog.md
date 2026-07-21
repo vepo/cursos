@@ -13,14 +13,14 @@ Authentication uses **Passport JWT**. Login obtains token from Passport (`:8080`
 | Request enrollment | `/` card or course preview | authenticated | **Disponível / Solicitado** → **Solicitar matrícula** |
 | Teacher area | `/teacher` | authenticated | Open the top-right menu icon → **Ensinar → Meus cursos** → choose a course → **Publicar curso** / **Despublicar** / Editar / Alunos / Progresso |
 | Create course | `/teacher/courses/new` | authenticated | Open the top-right menu icon → **Ensinar → Novo curso** → save → editor |
-| Course edit | `/teacher/courses/:courseId/edit` | course teacher | Left **aulas** list (icon = first block type) → edit aula title + ordered **blocks** → **+ Bloco** / create shortcuts (aula + one block) → Markdown preview + **galeria** → **Publicar curso** / **Despublicar**; cannot delete last block; unsaved changes use confirmation dialogs |
+| Course edit | `/teacher/courses/:courseId/edit` | course teacher | Left **aulas** list (icon = first block type) → **+ Nova aula** (chrome quiet on sidebar) → edit aula title + ordered **blocks** → **+ Bloco** / create shortcuts (aula + one block) → Markdown preview + **galeria** → **Publicar curso** / **Despublicar**; cannot delete last block; unsaved changes use confirmation dialogs |
 | Enrollment admin | `/teacher/courses/:courseId/students` | course teacher | Sections **Solicitações pendentes** / **Alunos matriculados** / **Recusados** with counts → **Aprovar** / **Recusar** (confirmação) → **Matricular aluno** via busca no Passport (já matriculados exibem badge) |
 | Progress admin | `/teacher/courses/:courseId/progress` | course teacher | Class aggregates → students sorted by least progress → expand for per-aula checklist → **Marcar concluída** / **Desfazer** (Teacher adjust; cascade confirmed) |
 | Category admin | `/admin/categories` | `cursos.admin` | Open the top-right menu icon → **Admin → Categorias** → create categories |
 
 ## Navigation shell
 
-Authenticated navigation is a right-anchored, two-level drawer behind the top-right header **menu icon**. It is closed by default at every breakpoint and closes through the toggle, a leaf link, or Escape; Escape returns focus to the toggle. On narrow viewports the drawer spans the viewport width. The authenticated header keeps only the **Learn** brand and menu icon; **Minha conta**, display name, and **Sair** live in the drawer **Conta** section. Unauthenticated users see **Entrar** without the drawer. A sticky **footer** shows copyright, optional Support/Docs/Legal/credit from branding config, and OpenAPI only when developer links are enabled; only the central page content scrolls. Branding loads from `GET /api/branding`. See [learn-productization.md](../feature/learn-productization.md) and [ui-visual-shell.md](../feature/ui-visual-shell.md).
+Authenticated navigation is a right-anchored, two-level drawer behind the top-right header **menu icon** (on-chrome contrast on ink header). It is closed by default at every breakpoint and closes through the toggle, a leaf link, or Escape; Escape returns focus to the toggle. On narrow viewports the drawer spans the viewport width. The authenticated header keeps only the **Learn** brand and menu icon; **Minha conta**, display name, and **Sair** (danger color, last interactive) live in the drawer **Conta** section, which is always the last group (after **Admin** when present). Unauthenticated users see **Entrar** without the drawer. A sticky **footer** shows copyright, optional Support/Docs/Legal/credit from branding config, and OpenAPI only when developer links are enabled; only the central page content scrolls. Branding loads from `GET /api/branding`. See [learn-productization.md](../feature/learn-productization.md) and [ui-visual-shell.md](../feature/ui-visual-shell.md).
 
 | Group | Leaf | Route | Access |
 |-------|------|-------|--------|
@@ -28,8 +28,9 @@ Authenticated navigation is a right-anchored, two-level drawer behind the top-ri
 | **Aprender** | Meus cursos | `/#matriculado` | authenticated |
 | **Ensinar** | Meus cursos | `/teacher` | authenticated (always visible in menu) |
 | **Ensinar** | Novo curso | `/teacher/courses/new` | authenticated |
-| **Conta** | Minha conta | `/account` | authenticated |
 | **Admin** | Categorias | `/admin/categories` | Passport JWT group `cursos.admin` |
+| **Conta** | Minha conta | `/account` | authenticated |
+| **Conta** | Sair | _(logout)_ | authenticated (last interactive; danger color) |
 
 Visual shell layout zones:
 
