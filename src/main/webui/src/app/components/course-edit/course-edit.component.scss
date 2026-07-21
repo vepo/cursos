@@ -8,7 +8,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 1rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-on-chrome) 12%, transparent);
 }
 
 .editor-nav-row {
@@ -28,11 +28,13 @@
   text-align: left;
   padding: 0.65rem 0.75rem;
   margin: 0.15rem 0;
-  border: 1px solid transparent;
+  border: 0;
+  border-left: 3px solid transparent;
   border-radius: var(--radius-card);
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-on-chrome);
   cursor: pointer;
+  font: inherit;
 }
 
 .editor-nav-item__label {
@@ -48,6 +50,10 @@
   height: 1.1rem;
   flex-shrink: 0;
   color: var(--color-text-muted);
+}
+
+.app-shell-sidebar .aula-type-icon {
+  color: color-mix(in srgb, var(--color-on-chrome) 70%, transparent);
 }
 
 .blocks-heading {
@@ -113,8 +119,9 @@
 }
 
 .editor-nav-item.is-selected {
-  background: var(--color-surface);
-  border-color: var(--color-border);
+  border-left-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-on-chrome);
 }
 
 .editor-nav-tools {

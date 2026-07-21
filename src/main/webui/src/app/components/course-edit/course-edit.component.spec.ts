@@ -207,6 +207,43 @@ describe('CourseEditComponent nested shell chrome (T26)', () => {
       .toBeTrue();
   });
 
+  it('shouldPaintUnselectedEditorNavItemWithOnChromeOnInkSidebar', () => {
+    const sidebar = fixture.nativeElement.querySelector(
+      '[data-testid="shell-sidebar"]'
+    ) as HTMLElement | null;
+    const navItem = fixture.nativeElement.querySelector(
+      '[data-testid="nav-item-1"]'
+    ) as HTMLElement | null;
+    expect(sidebar).withContext('course edit sidebar').not.toBeNull();
+    expect(navItem).withContext('aula nav item').not.toBeNull();
+    if (!sidebar || !navItem) {
+      return;
+    }
+
+    expect(navItem.classList.contains('is-selected'))
+      .withContext('default selection is details — aula nav must be unselected')
+      .toBeFalse();
+
+    const itemColor = getComputedStyle(navItem).color;
+    expect(cssColorEquals(itemColor, VISUAL_SHELL_TOKENS['--color-on-chrome']))
+      .withContext(
+        `unselected editor nav item must use --color-on-chrome on ink sidebar (got ${itemColor})`
+      )
+      .toBeTrue();
+
+    const icon = navItem.querySelector('mat-icon.aula-type-icon') as HTMLElement | null;
+    expect(icon).withContext('aula type icon in sidebar nav').not.toBeNull();
+    if (icon) {
+      const iconColor = getComputedStyle(icon).color;
+      expect(cssColorEquals(iconColor, VISUAL_SHELL_TOKENS['--color-text-muted']))
+        .withContext(`sidebar aula icon must not use page --color-text-muted (got ${iconColor})`)
+        .toBeFalse();
+      expect(cssColorEquals(iconColor, VISUAL_SHELL_TOKENS['--color-text']))
+        .withContext(`sidebar aula icon must not use page --color-text (got ${iconColor})`)
+        .toBeFalse();
+    }
+  });
+
   it('shouldWarnWhenLeavingDirtyEditor', () => {
     const component = fixture.componentInstance;
     const confirmation = TestBed.inject(ConfirmationService) as jasmine.SpyObj<ConfirmationService>;

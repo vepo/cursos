@@ -23,6 +23,7 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | Primary | `.btn-primary` | Publish, save, enroll, Abrir recurso |
 | Quiet | `.btn-quiet` | Secondary actions on light/main surfaces |
 | Quiet (chrome) | `.app-shell-sidebar .btn-quiet` | Secondary actions on ink sidebar (e.g. **+ Nova aula**); uses `--color-on-chrome` |
+| Editor nav item (chrome) | `.app-shell-sidebar .editor-nav-item` | Course-edit aula / details list on ink sidebar; unselected and selected use `--color-on-chrome`; selected = accent left border + translucent accent bg |
 | Danger | `.btn-danger` | Destructive icon actions |
 
 ## Status
@@ -45,6 +46,7 @@ Canonical reusable UI elements for the Cursos SPA. Prefer these over ad-hoc cont
 | Block list (editor) | `.block-list`, `.block-row`, `data-testid="block-list"` | Teacher: select/reorder/delete blocks |
 | Append block | `data-testid="append-block"` + `mat-menu` | Teacher: **+ Bloco** (Markdown / Vídeo / Link / Imagem) |
 | Aula type icon | `.aula-type-icon` / `.aula-icon` | First-block type in editor/study sidebar |
+| Aula type icon (chrome) | `.app-shell-sidebar .aula-type-icon` | Editor sidebar icons: muted `--color-on-chrome` mix (main block-list icons keep page `--color-text-muted`) |
 
 ## Dialogs
 

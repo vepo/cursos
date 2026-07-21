@@ -1,6 +1,6 @@
 # UI visual shell
 
-**Feature version:** 3  
+**Feature version:** 4  
 **Status:** done  
 **Requested:** 2026-07-18
 
@@ -353,3 +353,59 @@ Angular unit tests for shell and page layout regions; keep `data-testid` contrac
 **Development approval:** approved 2026-07-21 — tasks: T39, T40
 
 **Implementation notes:** Conta moved after Admin in `navigationGroups`. Sair uses `--color-danger`. Menu toggle inherits `--color-on-chrome`. `.app-shell-sidebar .btn-quiet` uses on-chrome for **+ Nova aula**. Specs in `app.spec.ts` and `course-edit.component.spec.ts`. Docs: domain-spec, feature-catalog, ui-elements-gallery. `npm test` (34) + `npm run build` green.
+
+### 2026-07-21 — Editor aula nav: unselected label contrast
+
+**Status:** done
+
+**Description:** Unselected course-editor aula titles (`.editor-nav-item`) were invisible on the ink sidebar because they used page tokens (`--color-text` / `--color-text-muted`). Use `--color-on-chrome` for sidebar nav labels and icons; align selected state with other chrome sidebars (accent cue + on-chrome text, not light surface + dark text). Scope icon color under `.app-shell-sidebar` so main-pane block-list icons stay on page tokens.
+
+**Impact on other features:** Course editor sidebar only (`course-edit` SCSS + spec); gallery note for chrome editor nav. Catalog / study / teacher sidebars already correct. No API/schema.
+
+#### Feature questions (FQ)
+
+| ID | Question | Status | Answer |
+|----|----------|--------|--------|
+| **FQ9** | Unselected aula nav color on ink sidebar? | answered | `--color-on-chrome` (and muted on-chrome mix for `.aula-type-icon` in sidebar). Opened by user report 2026-07-21. |
+
+#### Architecture questions (AQ)
+
+| ID | Question | Status | Answer |
+|----|----------|--------|--------|
+| **AQ7** | Scope of CSS fix? | answered | Component SCSS under `.app-shell-sidebar` for `.editor-nav-item` / `.aula-type-icon` / `.sidebar-heading` / selected; do not change global `.aula-type-icon` used in main block list. |
+
+#### Architecture
+
+| Area | Design |
+|------|--------|
+| Packages | `course-edit.component.scss` + `.spec.ts`; gallery doc |
+| Layers | N/A (Angular CSS) |
+| API / schema | None |
+| Tests | Unselected `[data-testid^="nav-item-"]` computed color = `--color-on-chrome` |
+
+#### Feature checklist
+
+| ID | Criterion | Source | Done |
+|----|-----------|--------|------|
+| FC20 | Unselected editor aula nav labels readable on ink (`--color-on-chrome`) | FQ9 | ☑ |
+| FC21 | Selected editor nav keeps on-chrome text with chrome accent selection (not page surface + dark text) | FQ9, AQ7 | ☑ |
+| FC22 | Sidebar `.aula-type-icon` muted on-chrome; main block-list icons unchanged | AQ7 | ☑ |
+| FC23 | Spec + gallery document chrome editor nav labels | Impact | ☑ |
+
+#### Tasks
+
+| ID | Task | Covers | Done |
+|----|------|--------|------|
+| T41 | Scope course-edit sidebar `.editor-nav-item` / `.aula-type-icon` / selected / `.sidebar-heading` to on-chrome tokens | FC20–FC22 | ☑ |
+| T42 | Spec for unselected nav-item on-chrome; update ui-elements-gallery | FC23 | ☑ |
+
+#### Test coverage
+
+| ID | Test | Covers | Done |
+|----|------|--------|------|
+| TC13 | Unselected `nav-item-*` color equals `--color-on-chrome` on ink sidebar | T41, T42 | ☑ |
+| TC14 | Gallery notes chrome editor nav; Angular specs green | T42 | ☑ |
+
+**Development approval:** approved 2026-07-21 — tasks: T41, T42 (plan implementation)
+
+**Implementation notes:** `.editor-nav-item` uses `--color-on-chrome`; selected uses accent left border + translucent accent bg (same pattern as teacher/catalog). `.app-shell-sidebar .aula-type-icon` muted on-chrome mix. Spec `shouldPaintUnselectedEditorNavItemWithOnChromeOnInkSidebar`. Gallery updated. `npm test` course-edit: 13 SUCCESS.
