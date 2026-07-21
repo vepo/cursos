@@ -188,6 +188,32 @@ describe('TeacherHomeComponent teaching shell (T26)', () => {
       .toBeTrue();
   });
 
+  it('shouldStretchSidebarToFullShellHeightWhenCourseListIsShort', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.height = '640px';
+    host.style.minHeight = '640px';
+    fixture.detectChanges();
+
+    const shell = teacherShell();
+    const sidebar = shellSidebar();
+    expect(shell).withContext('teacher shell').not.toBeNull();
+    expect(sidebar).withContext('shell sidebar').not.toBeNull();
+    if (!shell || !sidebar) {
+      return;
+    }
+
+    const shellHeight = shell.getBoundingClientRect().height;
+    const sidebarHeight = sidebar.getBoundingClientRect().height;
+
+    expect(shellHeight)
+      .withContext('shell fills the short-content scroll area')
+      .toBeGreaterThanOrEqual(640);
+    expect(Math.abs(sidebarHeight - shellHeight))
+      .withContext(`sidebar (${sidebarHeight}px) must match shell height (${shellHeight}px)`)
+      .toBeLessThan(2);
+  });
+
   it('shouldListTeachingCoursesAndNovoCursoInSidebar', () => {
     const sidebar = shellSidebar();
     expect(sidebar).withContext('Teaching course list lives in shell-sidebar').not.toBeNull();

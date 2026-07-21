@@ -65,6 +65,14 @@ button:focus-visible {
   box-sizing: border-box;
 }
 
+/* Desktop: one row fills the scroll area so the ink sidebar reaches the footer
+   even when the course list is short. Skip on stacked (mobile) layouts. */
+@media (min-width: 751px) {
+  .app-shell-page {
+    grid-template-rows: minmax(0, 1fr);
+  }
+}
+
 /* Novo curso (and any page shell without a sidebar) must span the full content width. */
 .app-shell-page:not(:has(> .app-shell-sidebar)) {
   grid-template-columns: minmax(0, 1fr);
